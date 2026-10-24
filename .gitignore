@@ -15,3 +15,6 @@ xcuserdata/
 
 # macOS
 .DS_Store
+
+# Local Claude Code config
+.claude/

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#0E1322"/><stop offset="1" stop-color="#090B13"/>
+  </linearGradient>
+  <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0" stop-color="#33E1FF" stop-opacity="0.16"/>
+    <stop offset="1" stop-color="#33E1FF" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="16" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="softglow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <linearGradient id="stairg" x1="100" y1="890" x2="830" y2="370" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#7389FF"/><stop offset="1" stop-color="#33E1FF"/></linearGradient>
+</defs>
+<rect width="1024" height="1024" fill="url(#bg)"/>
+<circle cx="560" cy="560" r="440" fill="url(#halo)"/>
+<line x1="141.0" y1="140" x2="141.0" y2="910" stroke="#7389FF" stroke-width="4" stroke-dasharray="2 22" stroke-linecap="round" opacity="0.28"/>
+<line x1="233.0" y1="140" x2="233.0" y2="910" stroke="#7389FF" stroke-width="4" stroke-dasharray="2 22" stroke-linecap="round" opacity="0.28"/>
+<line x1="325.0" y1="140" x2="325.0" y2="910" stroke="#7389FF" stroke-width="4" stroke-dasharray="2 22" stroke-linecap="round" opacity="0.28"/>
+<line x1="417.0" y1="140" x2="417.0" y2="910" stroke="#7389FF" stroke-width="4" stroke-dasharray="2 22" stroke-linecap="round" opacity="0.28"/>
+<line x1="509.0" y1="140" x2="509.0" y2="910" stroke="#7389FF" stroke-width="4" stroke-dasharray="2 22" stroke-linecap="round" opacity="0.28"/>
+<line x1="601.0" y1="140" x2="601.0" y2="910" stroke="#7389FF" stroke-width="4" stroke-dasharray="2 22" stroke-linecap="round" opacity="0.28"/>
+<line x1="693.0" y1="140" x2="693.0" y2="910" stroke="#7389FF" stroke-width="4" stroke-dasharray="2 22" stroke-linecap="round" opacity="0.28"/>
+<line x1="785.0" y1="140" x2="785.0" y2="910" stroke="#7389FF" stroke-width="4" stroke-dasharray="2 22" stroke-linecap="round" opacity="0.28"/>
+<g filter="url(#softglow)">
+<path d="M723.7,320.6 A80,80 0 0 1 846.3,320.6" fill="none" stroke="#FFBF40" stroke-width="36" stroke-linecap="round" opacity="1.00"/>
+<path d="M677.8,282.0 A140,140 0 0 1 892.2,282.0" fill="none" stroke="#FFBF40" stroke-width="36" stroke-linecap="round" opacity="0.78"/>
+<path d="M631.8,243.4 A200,200 0 0 1 938.2,243.4" fill="none" stroke="#FFBF40" stroke-width="36" stroke-linecap="round" opacity="0.56"/>
+</g>
+<g filter="url(#glow)">
+<rect x="100" y="836" width="82" height="50" rx="16" fill="url(#stairg)"/>
+<rect x="192" y="774" width="82" height="50" rx="16" fill="url(#stairg)"/>
+<rect x="284" y="712" width="82" height="50" rx="16" fill="url(#stairg)"/>
+<rect x="376" y="650" width="82" height="50" rx="16" fill="url(#stairg)"/>
+<rect x="468" y="588" width="82" height="50" rx="16" fill="url(#stairg)"/>
+<rect x="560" y="526" width="82" height="50" rx="16" fill="url(#stairg)"/>
+<rect x="652" y="464" width="82" height="50" rx="16" fill="url(#stairg)"/>
+<rect x="744" y="402" width="82" height="50" rx="16" fill="url(#stairg)"/>
+</g>
+</svg>

@@ -1,0 +1,17 @@
+# Build output
+build/
+DerivedData/
+.build/
+tools/refharness/build/
+JS8Core/.swiftpm/
+
+# Upstream source clones used only for reference
+reference/
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# macOS
+.DS_Store

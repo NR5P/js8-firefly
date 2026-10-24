@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#0E1322"/><stop offset="1" stop-color="#090B13"/>
+  </linearGradient>
+  <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0" stop-color="#33E1FF" stop-opacity="0.16"/>
+    <stop offset="1" stop-color="#33E1FF" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="16" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="softglow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  
+</defs>
+<rect width="1024" height="1024" fill="url(#bg)"/>
+<circle cx="512" cy="512" r="420" fill="url(#halo)"/>
+<rect x="160" y="160" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="160" y="264" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="160" y="472" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="160" y="576" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="160" y="680" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="160" y="784" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="264" y="160" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="264" y="264" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="264" y="368" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="264" y="472" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="264" y="680" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="264" y="784" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="368" y="160" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="368" y="368" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="368" y="472" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="368" y="576" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="368" y="680" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="368" y="784" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="472" y="264" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="472" y="368" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="472" y="472" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="472" y="576" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="472" y="680" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="472" y="784" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="576" y="160" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="576" y="264" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="576" y="368" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="576" y="472" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="576" y="576" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="576" y="784" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="680" y="160" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="680" y="264" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="680" y="368" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="680" y="576" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="680" y="680" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="680" y="784" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="784" y="160" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="784" y="264" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="784" y="368" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="784" y="472" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="784" y="576" width="80" height="80" rx="18" fill="#1A2242"/>
+<rect x="784" y="680" width="80" height="80" rx="18" fill="#1A2242"/>
+<g filter="url(#glow)">
+<rect x="160" y="368" width="80" height="80" rx="18" fill="#FFBF40"/>
+<rect x="264" y="576" width="80" height="80" rx="18" fill="#33E1FF"/>
+<rect x="368" y="264" width="80" height="80" rx="18" fill="#33E1FF"/>
+<rect x="472" y="160" width="80" height="80" rx="18" fill="#33E1FF"/>
+<rect x="576" y="680" width="80" height="80" rx="18" fill="#33E1FF"/>
+<rect x="680" y="472" width="80" height="80" rx="18" fill="#33E1FF"/>
+<rect x="784" y="784" width="80" height="80" rx="18" fill="#33E1FF"/>
+</g>
+</svg>

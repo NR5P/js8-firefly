@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#0E1322"/><stop offset="1" stop-color="#090B13"/>
+  </linearGradient>
+  <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+    <stop offset="0" stop-color="#33E1FF" stop-opacity="0.16"/>
+    <stop offset="1" stop-color="#33E1FF" stop-opacity="0"/>
+  </radialGradient>
+  <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="16" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="softglow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <linearGradient id="nf" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#7389FF" stop-opacity="0.38"/>
+    <stop offset="0.55" stop-color="#7389FF" stop-opacity="0.06"/>
+    <stop offset="1" stop-color="#7389FF" stop-opacity="0"/></linearGradient>
+</defs>
+<rect width="1024" height="1024" fill="url(#bg)"/>
+<circle cx="512" cy="690" r="380" fill="url(#halo)"/>
+
+<path d="M-20.0,520.0 L0.0,327.4 L26.0,424.6 L52.0,436.9 L78.0,438.5 L104.0,438.1 L130.0,326.2 L156.0,397.3 L182.0,241.4 L208.0,377.8 L234.0,333.9 L260.0,415.1 L286.0,438.6 L312.0,305.6 L338.0,438.1 L364.0,395.5 L390.0,253.4 L416.0,415.9 L442.0,465.5 L468.0,344.3 L494.0,282.0 L520.0,294.4 L546.0,313.4 L572.0,449.0 L598.0,460.5 L624.0,397.5 L650.0,247.8 L676.0,378.8 L702.0,321.1 L728.0,434.6 L754.0,432.3 L780.0,365.6 L806.0,315.1 L832.0,393.3 L858.0,451.6 L884.0,384.7 L910.0,288.9 L936.0,441.7 L962.0,417.6 L988.0,400.0 L1014.0,430.3 L1040.0,328.8 L1044.0,520.0 L1044.0,1044.0 L-20.0,1044.0 Z" fill="url(#nf)"/>
+<path d="M0.0,327.4 L26.0,424.6 L52.0,436.9 L78.0,438.5 L104.0,438.1 L130.0,326.2 L156.0,397.3 L182.0,241.4 L208.0,377.8 L234.0,333.9 L260.0,415.1 L286.0,438.6 L312.0,305.6 L338.0,438.1 L364.0,395.5 L390.0,253.4 L416.0,415.9 L442.0,465.5 L468.0,344.3 L494.0,282.0 L520.0,294.4 L546.0,313.4 L572.0,449.0 L598.0,460.5 L624.0,397.5 L650.0,247.8 L676.0,378.8 L702.0,321.1 L728.0,434.6 L754.0,432.3 L780.0,365.6 L806.0,315.1 L832.0,393.3 L858.0,451.6 L884.0,384.7 L910.0,288.9 L936.0,441.7 L962.0,417.6 L988.0,400.0 L1014.0,430.3 L1040.0,328.8" fill="none" stroke="#7389FF" stroke-width="16" stroke-linejoin="round" opacity="0.85"/>
+<path d="M120.0,786.0 L222.0,786.0 L232.0,718.0 L334.0,718.0 L344.0,752.0 L446.0,752.0 L456.0,650.0 L558.0,650.0 L568.0,684.0 L670.0,684.0 L680.0,616.0 L782.0,616.0 L792.0,582.0 L894.0,582.0" fill="none" stroke="#33E1FF" stroke-width="54" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+<circle cx="898" cy="582" r="22" fill="#FFBF40" filter="url(#softglow)"/>
+</svg>

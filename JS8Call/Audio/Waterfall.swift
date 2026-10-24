@@ -15,7 +15,8 @@ final class WaterfallRenderer: @unchecked Sendable {
     private var binFloor: [Float] = []
     private let lock = NSLock()
     private let palette: [UInt32]
-    var contrastDB: Float = 32
+    /// dB from the noise floor to full white.
+    var rangeDB = AppSettings.defaultWaterfallRange
     var brightness: Float = 0
     /// T/R period length; the first row of each period is drawn as a line.
     var periodSeconds: Double = 15
@@ -113,7 +114,7 @@ final class WaterfallRenderer: @unchecked Sendable {
         rowCount += 1
         let base = row * width
         let lo = floorDB - 4 + brightness
-        let span = max(8, contrastDB)
+        let span = max(8, rangeDB)
         for i in 0..<width {
             let v = (slice[i] - lo) / span
             let idx = Int(max(0, min(1, v)) * 255)

@@ -153,7 +153,9 @@ private struct AudioSection: View {
             Text("Set TX level so the radio's ALC barely moves. On iPhone, also use the volume buttons.")
                 .font(.caption).foregroundStyle(Theme.dim)
             LabeledContent("Waterfall contrast") {
-                Slider(value: $settings.waterfallContrast, in: 12...60)
+                // Right = more contrast = a narrower dB range from floor to white.
+                Slider(value: Binding(get: { -settings.waterfallRangeDB }, set: { settings.waterfallRange = -$0 }),
+                       in: -72 ... -16)
             }
             LabeledContent("Waterfall brightness") {
                 Slider(value: $settings.waterfallBrightness, in: -20...20)

@@ -19,12 +19,18 @@ struct AppSettings: Codable, Equatable {
     var clockOffset: Double = 0
     var macInputDevice: String = ""
     var macOutputDevice: String = ""
-    var waterfallContrast: Float = 32
+    /// dB from the waterfall's noise floor to full white; nil until the user sets it.
+    /// Optional so older saved settings still decode.
+    var waterfallRange: Float?
     var waterfallBrightness: Float = 0
     var notificationsEnabled = true
     var hasOnboarded = false
 
     static let storageKey = "JS8CallSettings.v1"
+
+    /// Wide enough that a signal 40 dB over the noise doesn't saturate to white.
+    static let defaultWaterfallRange: Float = 48
+    var waterfallRangeDB: Float { waterfallRange ?? Self.defaultWaterfallRange }
 
     static func load() -> AppSettings {
         guard let data = UserDefaults.standard.data(forKey: storageKey),

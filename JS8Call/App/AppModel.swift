@@ -105,7 +105,7 @@ final class AppModel {
             guard let self else { return }
             if self.settings.dialFrequency != hz { self.settings.dialFrequency = hz }
         }
-        waterfall.contrastDB = s.waterfallContrast
+        waterfall.rangeDB = s.waterfallRangeDB
         waterfall.brightness = s.waterfallBrightness
     }
 
@@ -219,7 +219,7 @@ final class AppModel {
             audio.applyInputGain()
             inputGain = audio.inputGain
         }
-        waterfall.contrastDB = settings.waterfallContrast
+        waterfall.rangeDB = settings.waterfallRangeDB
         waterfall.brightness = settings.waterfallBrightness
         if settings.rig != old.rig { rig.configure(settings.rig) }
         if settings.dialFrequency != old.dialFrequency, rig.isConnected, rig.frequency != settings.dialFrequency {

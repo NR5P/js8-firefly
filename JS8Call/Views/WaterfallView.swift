@@ -43,6 +43,19 @@ struct WaterfallView: View {
                         f += 100
                     }
 
+                    // Period boundaries (the lines themselves are in the image)
+                    let imgH = size.height - rulerH
+                    for mark in model.periodMarks {
+                        let y = rulerH + CGFloat(mark.rowsFromTop) / CGFloat(WaterfallRenderer.height) * imgH
+                        guard y < size.height - 8 else { continue }
+                        let label = ctx.resolve(Text(Self.utc.string(from: mark.start))
+                            .font(Theme.mono(9)).foregroundStyle(Color.white.opacity(0.85)))
+                        let ts = label.measure(in: CGSize(width: 100, height: 20))
+                        let rect = CGRect(x: 2, y: y - ts.height - 1, width: ts.width + 6, height: ts.height)
+                        ctx.fill(Path(roundedRect: rect, cornerRadius: 3), with: .color(Color.black.opacity(0.5)))
+                        ctx.draw(label, at: CGPoint(x: 5, y: rect.midY), anchor: .leading)
+                    }
+
                     // Spectrum trace
                     if showSpectrum, model.spectrum.count > 2 {
                         var path = Path()
@@ -120,6 +133,14 @@ struct WaterfallView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.stroke, lineWidth: 1))
     }
+
+    private static let utc: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss"
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
 
     private func xFor(_ hz: Double, _ w: CGFloat) -> CGFloat {
         CGFloat((hz - minHz) / (maxHz - minHz)) * w

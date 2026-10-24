@@ -40,6 +40,7 @@ final class AppModel {
     private(set) var pendingReplies: [PendingReply] = []
     private(set) var waterfallImage: CGImage?
     private(set) var spectrum: [Float] = []
+    private(set) var periodMarks: [WaterfallRenderer.PeriodMark] = []
     private(set) var markers: [DecodeMarker] = []
     private(set) var inputLevel: Float = -120
     /// When the input last came within 0.5 dB of full scale.
@@ -199,6 +200,7 @@ final class AppModel {
     private func applyStationSettings() {
         station.config = settings.station
         station.submode = settings.submode
+        waterfall.periodSeconds = Double(settings.submode.period)
         station.offset = settings.offset
         station.dialFrequency = settings.dialFrequency
         station.txEnabled = settings.txEnabled
@@ -431,6 +433,7 @@ final class AppModel {
     private func waterfallLoop() {
         waterfallImage = waterfall.makeImage()
         spectrum = waterfall.latestSpectrum
+        periodMarks = waterfall.periodMarks
     }
 
     func refresh(force: Bool = false) {

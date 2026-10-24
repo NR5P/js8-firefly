@@ -5,8 +5,9 @@ import Foundation
 final class WaterfallRenderer: @unchecked Sendable {
     static let minHz = 100.0
     static let maxHz = 3100.0
+    static let height = 220
     let width: Int
-    let height = 220
+    let height = WaterfallRenderer.height
     private let startBin: Int
     private var pixels: [UInt32]
     private var row = 0
@@ -16,7 +17,27 @@ final class WaterfallRenderer: @unchecked Sendable {
     private let palette: [UInt32]
     var contrastDB: Float = 32
     var brightness: Float = 0
+    /// T/R period length; the first row of each period is drawn as a line.
+    var periodSeconds: Double = 15
     private var latest: [Float] = []
+    private var rowCount = 0
+    private var lastPeriod: Int64 = -1
+    /// Period boundaries still on screen: the row they were drawn on and the period start time.
+    private var boundaries: [(row: Int, start: Double)] = []
+    private var snapshotMarks: [PeriodMark] = []
+
+    /// A period boundary in the latest image, `rowsFromTop` rows below the newest row.
+    struct PeriodMark: Hashable {
+        let rowsFromTop: Int
+        let start: Date
+    }
+
+    /// Period boundaries matching the most recent `makeImage()`.
+    var periodMarks: [PeriodMark] {
+        lock.lock()
+        defer { lock.unlock() }
+        return snapshotMarks
+    }
 
     /// Most recent normalised spectrum row (0…1), safe to call from any thread.
     var latestSpectrum: [Float] {
@@ -83,23 +104,41 @@ final class WaterfallRenderer: @unchecked Sendable {
         let sorted = slice.sorted()
         let p25 = sorted[sorted.count / 4]
         floorDB = floorDB * 0.9 + p25 * 0.1
+        let p = max(1, periodSeconds)
+        let period = Int64((AppClock.nowSeconds() / p).rounded(.down))
+        let isBoundary = lastPeriod >= 0 && period != lastPeriod
+        lastPeriod = period
         lock.lock()
         row = (row + height - 1) % height
+        rowCount += 1
         let base = row * width
         let lo = floorDB - 4 + brightness
         let span = max(8, contrastDB)
         for i in 0..<width {
             let v = (slice[i] - lo) / span
             let idx = Int(max(0, min(1, v)) * 255)
-            pixels[base + i] = palette[idx]
+            pixels[base + i] = isBoundary ? Self.boundaryTint(palette[idx]) : palette[idx]
         }
+        if isBoundary { boundaries.append((rowCount, Double(period) * p)) }
+        boundaries.removeAll { rowCount - $0.row >= height }
         latest = slice.map { ($0 - lo) / span }
         lock.unlock()
+    }
+
+    /// Blend a pixel halfway toward light grey so the boundary shows without hiding signals.
+    private static func boundaryTint(_ px: UInt32) -> UInt32 {
+        let r = ((px & 0xFF) + 0xD0) / 2
+        let g = (((px >> 8) & 0xFF) + 0xD0) / 2
+        let b = (((px >> 16) & 0xFF) + 0xD0) / 2
+        return 0xFF00_0000 | (b << 16) | (g << 8) | r
     }
 
     /// Newest row first.
     func makeImage() -> CGImage? {
         lock.lock()
+        snapshotMarks = boundaries.map {
+            PeriodMark(rowsFromTop: rowCount - $0.row, start: Date(timeIntervalSince1970: $0.start))
+        }
         var ordered = [UInt32](repeating: 0, count: width * height)
         let first = row * width
         let tail = pixels.count - first

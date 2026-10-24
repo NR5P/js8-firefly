@@ -1,5 +1,10 @@
 import SwiftUI
 import JS8Core
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 /// The RX/TX conversation pane, styled as a chat.
 struct ConversationView: View {
@@ -37,10 +42,130 @@ struct ConversationView: View {
     }
 }
 
+/// Everything decoded across the passband, one bubble per transmission.
+/// Tap a bubble to move there and select the sender.
+struct BandConversationView: View {
+    @Environment(AppModel.self) private var model
+    var filterCallsign: String?
+    var showHeartbeats = false
+
+    var body: some View {
+        let lines = model.bandConversation.filter { line in
+            if !showHeartbeats && (line.text.contains("@HB") || line.text.contains(" HEARTBEAT")) { return false }
+            guard let c = filterCallsign, !c.isEmpty else { return true }
+            return line.text.contains(c)
+        }
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 8) {
+                    if lines.isEmpty {
+                        EmptyStateView(icon: "dot.radiowaves.left.and.right", title: "Nothing heard yet",
+                                       subtitle: "Every conversation decoded anywhere in the passband shows up here. Tap one to join it.")
+                    }
+                    ForEach(lines) { line in
+                        let onMyOffset = abs(line.offset - model.settings.offset) <= (line.submode ?? model.settings.submode).rxThreshold
+                        MessageBubble(line: line, eot: model.settings.station.eot, mycall: model.settings.station.callsign,
+                                      showSignal: true, onMyOffset: onMyOffset)
+                            .id(line.id)
+                            .contentShape(Rectangle())
+                            .onTapGesture { if !line.isTx { join(line) } }
+                            .contextMenu {
+                                if !line.isTx {
+                                    Button("Listen on \(line.offset) Hz") { model.setOffset(line.offset) }
+                                    if let call = AppModel.sender(of: line) {
+                                        Button("Join \(call) on \(line.offset) Hz") { join(line) }
+                                    }
+                                }
+                                Button("Copy text") { Pasteboard.copy(line.text) }
+                            }
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+            .onChange(of: model.bandConversation.last?.text) { _, _ in
+                if let last = lines.last {
+                    withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(last.id, anchor: .bottom) }
+                }
+            }
+            .onAppear {
+                if let last = lines.last { proxy.scrollTo(last.id, anchor: .bottom) }
+            }
+        }
+    }
+
+    private func join(_ line: ConversationLine) {
+        model.join(line)
+        let who = AppModel.sender(of: line).map { " with \($0) selected" } ?? ""
+        model.banner = "Listening on \(line.offset) Hz\(who)"
+    }
+}
+
+enum Pasteboard {
+    static func copy(_ s: String) {
+        #if os(iOS)
+        UIPasteboard.general.string = s
+        #else
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(s, forType: .string)
+        #endif
+    }
+}
+
+/// Which traffic the chat pane shows.
+enum ChatScope: String, CaseIterable, Identifiable {
+    case band = "All band"
+    case mine = "My offset"
+    var id: String { rawValue }
+}
+
+/// Conversation header with the All band / My offset switch, used on every layout.
+struct ChatPane: View {
+    @Environment(AppModel.self) private var model
+    @AppStorage("chatScope") private var scope = ChatScope.band
+    @AppStorage("chatShowHeartbeats") private var showHeartbeats = false
+    @State private var onlySelected = false
+
+    var body: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                Picker("Show", selection: $scope) {
+                    ForEach(ChatScope.allCases) { s in Text(s.rawValue).tag(s) }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 240)
+                Spacer()
+                if scope == .band {
+                    Toggle(isOn: $showHeartbeats) { Image(systemName: showHeartbeats ? "heart.fill" : "heart.slash") }
+                        .toggleStyle(.button)
+                        .font(.caption)
+                        .accessibilityLabel("Show heartbeats")
+                }
+                if !model.selectedCallsign.isEmpty {
+                    Toggle("Only \(model.selectedCallsign)", isOn: $onlySelected)
+                        .toggleStyle(.button)
+                        .font(.caption)
+                }
+                Button {
+                    scope == .band ? model.clearBandConversation() : model.clearConversation()
+                } label: { Image(systemName: "trash") }
+                    .buttonStyle(.plain).foregroundStyle(Theme.faint)
+            }
+            .padding(.horizontal, 10)
+            let filter = onlySelected ? model.selectedCallsign : nil
+            switch scope {
+            case .band: BandConversationView(filterCallsign: filter, showHeartbeats: showHeartbeats)
+            case .mine: ConversationView(filterCallsign: filter)
+            }
+        }
+    }
+}
+
 struct MessageBubble: View {
     let line: ConversationLine
     let eot: String
     let mycall: String
+    var showSignal = false
+    var onMyOffset = false
 
     var body: some View {
         let toMe = !line.isTx && !mycall.isEmpty && line.text.contains(" \(mycall)")
@@ -50,7 +175,15 @@ struct MessageBubble: View {
                 HStack(spacing: 6) {
                     Text(Format.utcTime.string(from: line.date))
                     Text("\(line.offset) Hz")
+                        .foregroundStyle(onMyOffset ? Theme.warn : Theme.faint)
+                    if showSignal, !line.isTx, let snr = line.snr {
+                        Text(Format.snr(snr) + " dB").foregroundStyle(Theme.snrColor(snr))
+                    }
+                    if showSignal, let m = line.submode {
+                        Text(m.name).foregroundStyle(Theme.modeColor(m))
+                    }
                     if line.isTx { Image(systemName: "antenna.radiowaves.left.and.right") }
+                    if showSignal && onMyOffset && !line.isTx { Image(systemName: "ear").foregroundStyle(Theme.warn) }
                 }
                 .font(Theme.mono(9))
                 .foregroundStyle(Theme.faint)

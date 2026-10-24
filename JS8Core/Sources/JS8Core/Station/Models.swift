@@ -75,6 +75,8 @@ public struct ConversationLine: Identifiable, Hashable, Sendable, Codable {
     public var text: String
     public var isTx: Bool
     public var isComplete: Bool
+    public var snr: Int?
+    public var submode: JS8Submode?
 }
 
 public enum Priority {

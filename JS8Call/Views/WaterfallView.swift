@@ -116,9 +116,7 @@ struct WaterfallView: View {
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onEnded { g in
-                        let hz = minHz + Double(g.location.x / w) * (maxHz - minHz)
-                        let bw = Double(model.settings.submode.bandwidth)
-                        model.setOffset(Int((hz - bw / 2).rounded()))
+                        model.tuneNear(minHz + Double(g.location.x / w) * (maxHz - minHz))
                     }
             )
             .overlay(alignment: .bottomTrailing) {

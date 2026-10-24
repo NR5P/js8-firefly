@@ -36,6 +36,7 @@ final class AppModel {
     private(set) var bandRows: [BandActivityRow] = []
     private(set) var calls: [CallDetail] = []
     private(set) var conversation: [ConversationLine] = []
+    private(set) var bandConversation: [ConversationLine] = []
     private(set) var inbox: [InboxMessage] = []
     private(set) var pendingReplies: [PendingReply] = []
     private(set) var waterfallImage: CGImage?
@@ -250,6 +251,33 @@ final class AppModel {
         settings.offset = max(100, min(3000 - bw, hz))
     }
 
+    /// Move to a tapped waterfall position, snapping onto a recently decoded
+    /// signal under the finger. A fingertip spans ~30 Hz on a phone, far wider
+    /// than the ±10 Hz window the conversation pane listens to.
+    func tuneNear(_ hz: Double) {
+        let bw = settings.submode.bandwidth
+        let slop = 25.0
+        let signals = bandRows.map { ($0.offset, $0.submode.bandwidth) }
+            + markers.map { (Int($0.frequency.rounded()), $0.bandwidth) }
+        let hit = signals
+            .filter { hz >= Double($0.0) - slop && hz <= Double($0.0 + $0.1) + slop }
+            .min { abs(Double($0.0 + $0.1 / 2) - hz) < abs(Double($1.0 + $1.1 / 2) - hz) }
+        setOffset(hit?.0 ?? Int((hz - Double(bw) / 2).rounded()))
+    }
+
+    /// Listen on a band line's offset and select its sender, so the rest of
+    /// that QSO lands in the conversation pane.
+    func join(_ line: ConversationLine) {
+        setOffset(line.offset)
+        if let call = Self.sender(of: line) { selectedCallsign = call }
+    }
+
+    static func sender(of line: ConversationLine) -> String? {
+        guard let colon = line.text.firstIndex(of: ":") else { return nil }
+        let call = String(line.text[..<colon]).trimmingCharacters(in: .whitespaces)
+        return Varicode.parseCallsigns(call).first == call ? call : nil
+    }
+
     func setDial(_ hz: UInt64) {
         settings.dialFrequency = hz
     }
@@ -442,6 +470,7 @@ final class AppModel {
         bandRows = station.bandActivityRows(now: AppClock.now())
         calls = station.callActivity.values.sorted { $0.utc > $1.utc }
         conversation = station.conversation
+        bandConversation = station.bandConversation
         pendingReplies = station.pendingReplies
         queuedFrames = station.txFramesRemaining
         heartbeatLoop = station.heartbeatLoopActive
@@ -457,6 +486,11 @@ final class AppModel {
 
     func clearConversation() {
         station.clearConversation()
+        refresh(force: true)
+    }
+
+    func clearBandConversation() {
+        station.clearBandConversation()
         refresh(force: true)
     }
 

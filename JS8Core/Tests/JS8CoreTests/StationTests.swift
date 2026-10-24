@@ -159,6 +159,27 @@ final class StationTests: XCTestCase {
         XCTAssertTrue(conversationText(b).contains("GOOD MORNING, NAME IS JORDAN. WX IS SUNNY 72F"), conversationText(b))
     }
 
+    func testBandConversationHearsOtherOffsets() {
+        let a = makeStation("KN4CRD", "EM73")
+        let b = makeStation("J1Y", "PM95")
+        let c = makeStation("W1AW", "FN31")
+        a.offset = 1500
+        b.offset = 1500
+        c.offset = 900
+        a.selectedCallsign = "J1Y"
+        a.send("GOOD MORNING, NAME IS JORDAN. WX IS SUNNY 72F")
+        run([a, b, c], periods: 8)
+        let band = c.bandConversation.map(\.text).joined(separator: "\n")
+        XCTAssertFalse(conversationText(c).contains("SUNNY 72F"), conversationText(c))
+        let line = c.bandConversation.first { $0.text.contains("GOOD MORNING") }
+        XCTAssertNotNil(line, band)
+        XCTAssertTrue(line?.text.contains("SUNNY 72F") == true, band)
+        XCTAssertTrue(line?.isComplete == true, band)
+        XCTAssertEqual(line.map { abs($0.offset - 1500) <= 10 }, true, band)
+        XCTAssertTrue(a.bandConversation.contains { $0.isTx && $0.text.contains("SUNNY 72F") },
+                      a.bandConversation.map(\.text).joined(separator: "\n"))
+    }
+
     func testFastModes() {
         for mode in [JS8Submode.fast, .turbo, .slow, .ultra] {
             let a = makeStation("KN4CRD", "EM73")

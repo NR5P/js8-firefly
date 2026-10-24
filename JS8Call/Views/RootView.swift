@@ -86,9 +86,6 @@ struct LiveTab: View {
 }
 
 struct ChatTab: View {
-    @Environment(AppModel.self) private var model
-    @State private var onlySelected = false
-
     var body: some View {
         VStack(spacing: 0) {
             HeaderView()
@@ -96,19 +93,8 @@ struct ChatTab: View {
                 .frame(height: 70)
                 .padding(.horizontal, 10)
                 .padding(.top, 6)
-            HStack {
-                SectionHeader(title: "Conversation", icon: "bubble.left.and.bubble.right")
-                if !model.selectedCallsign.isEmpty {
-                    Toggle("Only \(model.selectedCallsign)", isOn: $onlySelected)
-                        .toggleStyle(.button)
-                        .font(.caption)
-                }
-                Button { model.clearConversation() } label: { Image(systemName: "trash") }
-                    .buttonStyle(.plain).foregroundStyle(Theme.faint)
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 8)
-            ConversationView(filterCallsign: onlySelected ? model.selectedCallsign : nil)
+            ChatPane()
+                .padding(.top, 8)
                 .frame(maxHeight: .infinity, alignment: .top)
             ComposeBar()
                 .padding(.horizontal, 8)
@@ -159,7 +145,7 @@ struct DesktopLayout: View {
                 Card { BandActivityView() }
                     .frame(minWidth: 280, idealWidth: 360)
                 VStack(spacing: 8) {
-                    Card(padding: 4) { ConversationView() }
+                    Card(padding: 4) { ChatPane().padding(.top, 6) }
                     ComposeBar()
                 }
                 .frame(minWidth: 380)

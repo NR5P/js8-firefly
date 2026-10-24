@@ -32,6 +32,9 @@ public final class JS8Station {
     public private(set) var bandActivity: [Int: [ActivityDetail]] = [:]
     public private(set) var callActivity: [String: CallDetail] = [:]
     public private(set) var conversation: [ConversationLine] = []
+    /// Every transmission heard anywhere in the passband, assembled per offset.
+    /// The conversation pane only shows our offset and traffic directed to us.
+    public private(set) var bandConversation: [ConversationLine] = []
     public private(set) var heardGraphOutgoing: [String: Set<String>] = [:]
     public private(set) var heardGraphIncoming: [String: Set<String>] = [:]
     public private(set) var pendingReplies: [PendingReply] = []
@@ -67,6 +70,8 @@ public final class JS8Station {
     private var dupeCache: [FrameKey: Date] = [:]
     private var rxDirectedCache: [Int: (isAllcall: Bool, date: Date)] = [:]
     private var rxFrameBlockNumbers: [Int: Int] = [:]
+    /// Open (unfinished) lines in bandConversation by offset; -1 keys our TX.
+    private var bandOpenLines: [Int: Int] = [:]
     private var allcallReplies: [String: Date] = [:]
     private var txFrameQueue: [Varicode.Frame] = []
     private var totalTxMessage = ""
@@ -378,6 +383,8 @@ public final class JS8Station {
             } else if d.isDirected && (d.text.contains(": HB ") || d.text.contains(": @ALLCALL HB")) {
                 continue
             }
+
+            logBandText(d.text, offset: d.offset, date: d.utc, snr: d.snr, submode: d.submode, bits: d.bits, isTx: false)
 
             if d.bits & Varicode.TransmissionType.first.rawValue != 0 && !d.isDirected && !d.isCompound {
                 let calls = Varicode.parseCallsigns(d.text)
@@ -941,6 +948,48 @@ public final class JS8Station {
         onChange?()
     }
 
+    /// Assemble frames into one line per transmission, for every offset.
+    func logBandText(_ textIn: String, offset: Int, date: Date, snr: Int?, submode: JS8Submode, bits: Int, isTx: Bool) {
+        let isFirst = bits & Varicode.TransmissionType.first.rawValue != 0
+        let isLast = bits & Varicode.TransmissionType.last.rawValue != 0
+        let isIdle = !isTx && textIn == config.mfi
+        var text = textIn
+        if isLast { text = "\(Varicode.rstrip(text)) \(config.eot) " }
+
+        // Follow a stream that drifts a few Hz between frames.
+        let key: Int? = isTx ? (bandOpenLines[-1] != nil ? -1 : nil) : bandOpenLines.keys
+            .filter { $0 >= 0 && abs($0 - offset) <= submode.rxThreshold }
+            .min { abs($0 - offset) < abs($1 - offset) }
+
+        var index: Int
+        if !isFirst, let k = key, let i = bandOpenLines[k], i < bandConversation.count, !bandConversation[i].isComplete {
+            bandOpenLines[k] = nil
+            bandConversation[i].text += text
+            bandConversation[i].isComplete = isLast || isIdle
+            if let snr { bandConversation[i].snr = snr }
+            index = i
+        } else {
+            if let k = key { bandOpenLines[k] = nil }
+            if isIdle { return }
+            bandConversation.append(ConversationLine(date: date, offset: offset, text: text, isTx: isTx, isComplete: isLast,
+                                                     snr: snr, submode: submode))
+            index = bandConversation.count - 1
+        }
+        if bandConversation.count > 1000 {
+            let drop = bandConversation.count - 1000
+            bandConversation.removeFirst(drop)
+            index -= drop
+            bandOpenLines = bandOpenLines.compactMapValues { $0 - drop >= 0 ? $0 - drop : nil }
+        }
+        if !isLast && !isIdle { bandOpenLines[isTx ? -1 : offset] = index }
+    }
+
+    public func clearBandConversation() {
+        bandConversation.removeAll()
+        bandOpenLines.removeAll()
+        onChange?()
+    }
+
     public func clearBandActivity() {
         bandActivity.removeAll()
         onChange?()
@@ -1098,6 +1147,8 @@ public final class JS8Station {
         let isFirst = txFramesSent == 1
         let display = isLast ? "\(dt.message) \(config.eot) " : dt.message
         displayText(display, offset: offset, date: now, isTx: true, isNewLine: isLast ? false : isFirst, isLast: isLast)
+        logBandText(dt.message, offset: offset, date: now, snr: nil, submode: submode,
+                    bits: frame.type | (isFirst ? Varicode.TransmissionType.first.rawValue : 0), isTx: true)
 
         let req = TxRequest(frame: frame.frame, type: frame.type, tones: tones, offset: offset, submode: submode,
                             periodStart: periodStart, displayText: dt.message)

@@ -68,6 +68,7 @@ struct LiveTab: View {
     var body: some View {
         VStack(spacing: 0) {
             HeaderView()
+                .dismissesKeyboardOnTap()
             VStack(spacing: 10) {
                 WaterfallView()
                     .frame(height: 190)
@@ -77,6 +78,7 @@ struct LiveTab: View {
             .padding(.horizontal, 10)
             .padding(.top, 8)
             .frame(maxHeight: .infinity, alignment: .top)
+            .dismissesKeyboardOnTap()
             ComposeBar()
                 .padding(.horizontal, 8)
                 .padding(.bottom, 6)
@@ -88,14 +90,17 @@ struct LiveTab: View {
 struct ChatTab: View {
     var body: some View {
         VStack(spacing: 0) {
-            HeaderView()
-            WaterfallView(showSpectrum: false)
-                .frame(height: 70)
-                .padding(.horizontal, 10)
-                .padding(.top, 6)
-            ChatPane()
-                .padding(.top, 8)
-                .frame(maxHeight: .infinity, alignment: .top)
+            VStack(spacing: 0) {
+                HeaderView()
+                WaterfallView(showSpectrum: false)
+                    .frame(height: 70)
+                    .padding(.horizontal, 10)
+                    .padding(.top, 6)
+                ChatPane()
+                    .padding(.top, 8)
+                    .frame(maxHeight: .infinity, alignment: .top)
+            }
+            .dismissesKeyboardOnTap()
             ComposeBar()
                 .padding(.horizontal, 8)
                 .padding(.bottom, 6)
@@ -140,17 +145,21 @@ struct DesktopLayout: View {
             WaterfallView()
                 .frame(height: 210)
                 .padding(10)
+                .dismissesKeyboardOnTap()
 
             HStack(alignment: .top, spacing: 10) {
                 Card { BandActivityView() }
                     .frame(minWidth: 280, idealWidth: 360)
+                    .dismissesKeyboardOnTap()
                 VStack(spacing: 8) {
                     Card(padding: 4) { ChatPane().padding(.top, 6) }
+                        .dismissesKeyboardOnTap()
                     ComposeBar()
                 }
                 .frame(minWidth: 380)
                 Card { StationsView() }
                     .frame(minWidth: 250, idealWidth: 300)
+                    .dismissesKeyboardOnTap()
             }
             .padding([.horizontal, .bottom], 10)
         }

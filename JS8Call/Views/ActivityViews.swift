@@ -30,6 +30,7 @@ struct BandActivityView: View {
                         }
                     }
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
         }
     }
@@ -112,6 +113,7 @@ struct StationsView: View {
                         }
                     }
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
         }
     }

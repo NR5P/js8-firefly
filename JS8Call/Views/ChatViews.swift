@@ -30,6 +30,7 @@ struct ConversationView: View {
                 }
                 .padding(.vertical, 8)
             }
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: model.conversation.last?.text) { _, _ in
                 if let last = lines.last {
                     withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(last.id, anchor: .bottom) }
@@ -82,6 +83,7 @@ struct BandConversationView: View {
                 }
                 .padding(.vertical, 8)
             }
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: model.bandConversation.last?.text) { _, _ in
                 if let last = lines.last {
                     withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(last.id, anchor: .bottom) }
@@ -107,6 +109,27 @@ enum Pasteboard {
         #else
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(s, forType: .string)
+        #endif
+    }
+}
+
+enum Keyboard {
+    /// Ends editing in whichever text field has focus.
+    static func dismiss() {
+        #if os(iOS)
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        #endif
+    }
+}
+
+extension View {
+    /// A tap anywhere in this view also puts the keyboard away, without
+    /// taking the tap from buttons, bubbles or the waterfall underneath.
+    func dismissesKeyboardOnTap() -> some View {
+        #if os(iOS)
+        simultaneousGesture(TapGesture().onEnded { Keyboard.dismiss() })
+        #else
+        self
         #endif
     }
 }
@@ -372,6 +395,15 @@ struct ComposeBar: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(text.isEmpty || !model.settings.txEnabled)
+
+                #if os(iOS)
+                if focused {
+                    Button("Done") { focused = false }
+                        .font(Theme.rounded(14, .semibold))
+                        .foregroundStyle(Theme.accent)
+                        .buttonStyle(.plain)
+                }
+                #endif
             }
 
             if !text.isEmpty {

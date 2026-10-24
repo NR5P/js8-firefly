@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>JS8 Firefly iPhone Setup Guide</title>
+<style>
+  @page { size: Letter; margin: 0.6in 0.65in 0.7in; }
+  @page cover { margin: 0; }
+  :root {
+    --ink: #14202e;
+    --dim: #5a6878;
+    --faint: #9aa6b4;
+    --rule: #dfe5ec;
+    --panel: #f4f7fa;
+    --navy: #0e1a2b;
+    --lime: #c8f04a;
+    --lime-deep: #6b8f00;
+    --red: #d64545;
+    --amber: #c98a00;
+    --green: #2f9e5b;
+    --blue: #2f6fd6;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.5;
+    color: var(--ink);
+    background: #fff;
+  }
+  h1, h2, h3 { font-family: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif; line-height: 1.2; }
+  h2 {
+    font-size: 19pt; margin: 0 0 4pt; letter-spacing: -0.01em;
+    break-after: avoid;
+  }
+  h2 .num {
+    display: inline-block; width: 26pt; height: 26pt; line-height: 26pt; text-align: center;
+    border-radius: 7pt; background: var(--navy); color: var(--lime); font-size: 13pt;
+    margin-right: 8pt; vertical-align: 2pt;
+  }
+  .lede { color: var(--dim); margin: 0 0 14pt; font-size: 11pt; }
+  h3 { font-size: 12.5pt; margin: 16pt 0 6pt; break-after: avoid; }
+  p { margin: 0 0 8pt; }
+  section { break-before: page; }
+  section.flow { break-before: auto; margin-top: 26pt; }
+  code, .mono { font-family: "SF Mono", Menlo, monospace; font-size: 9.2pt; }
+  .ui { font-weight: 600; white-space: nowrap; }
+  .path { font-weight: 600; }
+  .path .sep { color: var(--faint); font-weight: 400; padding: 0 2pt; }
+
+  /* Cover */
+  .cover {
+    page: cover; height: 10.98in; width: 8.5in; position: relative; overflow: hidden;
+    background: radial-gradient(ellipse at 70% 30%, #1d3350 0%, #0e1a2b 55%, #08111d 100%);
+    color: #fff; padding: 1.1in 0.9in;
+  }
+  .cover img { width: 132px; height: 132px; border-radius: 30px; box-shadow: 0 0 60px rgba(200,240,74,0.35); }
+  .cover .kicker { margin-top: 36pt; color: var(--lime); font-weight: 700; letter-spacing: 0.14em; font-size: 10pt; text-transform: uppercase; }
+  .cover h1 { font-size: 40pt; margin: 8pt 0 10pt; letter-spacing: -0.02em; }
+  .cover .sub { font-size: 15pt; color: #b9c6d6; max-width: 5.4in; line-height: 1.4; }
+  .cover .contents { position: absolute; left: 0.9in; right: 0.9in; bottom: 1.0in; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 16pt; display: grid; grid-template-columns: 1fr 1fr; gap: 4pt 28pt; font-size: 10.5pt; color: #cdd7e3; }
+  .cover .contents b { color: var(--lime); display: inline-block; width: 18pt; }
+  .cover .waves { position: absolute; right: -40px; top: 120px; opacity: 0.18; }
+
+  /* Callouts */
+  .callout { border-radius: 8pt; padding: 10pt 12pt; margin: 10pt 0; break-inside: avoid; border: 1px solid var(--rule); background: var(--panel); }
+  .callout .t { font-weight: 700; display: block; margin-bottom: 3pt; }
+  .callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+  .callout.key { background: #f6fbe6; border-color: #cfe58a; }
+  .callout.key .t { color: var(--lime-deep); }
+  .callout.warn { background: #fff7e6; border-color: #f1d189; }
+  .callout.warn .t { color: var(--amber); }
+  .callout.stop { background: #fdeeee; border-color: #f1b8b8; }
+  .callout.stop .t { color: var(--red); }
+
+  /* Steps */
+  ol.steps { list-style: none; counter-reset: s; padding: 0; margin: 6pt 0 10pt; }
+  ol.steps > li { counter-increment: s; position: relative; padding: 0 0 9pt 30pt; break-inside: avoid; }
+  ol.steps > li::before {
+    content: counter(s); position: absolute; left: 0; top: 0;
+    width: 19pt; height: 19pt; line-height: 19pt; text-align: center; border-radius: 50%;
+    background: #e9eef4; color: var(--navy); font-weight: 700; font-size: 9.5pt;
+  }
+  .expect { display: block; color: var(--green); font-size: 9.6pt; margin-top: 2pt; }
+  .expect::before { content: "✓ "; font-weight: 700; }
+
+  ul.check { list-style: none; padding: 0; margin: 4pt 0 8pt; }
+  ul.check.cols { columns: 2; column-gap: 20pt; }
+  ul.check li { padding-left: 20pt; position: relative; margin-bottom: 5pt; break-inside: avoid; }
+  ul.check li::before { content: ""; position: absolute; left: 0; top: 3pt; width: 10pt; height: 10pt; border: 1.4px solid var(--dim); border-radius: 2.5pt; }
+
+  table { width: 100%; border-collapse: collapse; margin: 8pt 0 12pt; font-size: 9.6pt; break-inside: auto; }
+  th, td { text-align: left; vertical-align: top; padding: 6pt 8pt; border-bottom: 1px solid var(--rule); }
+  th { background: var(--navy); color: #fff; font-weight: 600; font-size: 9pt; }
+  th:first-child { border-top-left-radius: 6pt; } th:last-child { border-top-right-radius: 6pt; }
+  tr { break-inside: avoid; }
+  table.tight { font-size: 9.2pt; line-height: 1.4; }
+  table.tight td { padding: 4.5pt 7pt; }
+  td.k { font-weight: 600; white-space: nowrap; }
+  .pill { display: inline-block; padding: 0 6pt; border-radius: 10pt; font-size: 8.5pt; font-weight: 700; }
+  .pill.g { background: #e3f4ea; color: var(--green); }
+  .pill.a { background: #fff1d1; color: var(--amber); }
+  .pill.r { background: #fbe0e0; color: var(--red); }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14pt; }
+  .card { border: 1px solid var(--rule); border-radius: 9pt; padding: 11pt 12pt; break-inside: avoid; }
+  .card h4 { margin: 0 0 4pt; font-size: 11.5pt; }
+  .card .tag { font-size: 8.5pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+  .card ul { padding-left: 14pt; margin: 4pt 0 0; }
+  .card li { margin-bottom: 2pt; }
+
+  figure { margin: 10pt 0 14pt; break-inside: avoid; }
+  figure svg { width: 100%; height: auto; display: block; }
+  figcaption { font-size: 9pt; color: var(--dim); margin-top: 4pt; }
+
+  .meter { display: flex; height: 16pt; border-radius: 5pt; overflow: hidden; font-size: 8pt; font-weight: 700; color: #fff; margin: 6pt 0 2pt; }
+  .meter div { display: flex; align-items: center; justify-content: center; }
+  .meter-scale { display: flex; justify-content: space-between; font-size: 8pt; color: var(--faint); font-family: "SF Mono", Menlo, monospace; }
+
+  .foot { margin-top: 18pt; font-size: 8.5pt; color: var(--faint); border-top: 1px solid var(--rule); padding-top: 6pt; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <svg class="waves" width="520" height="520" viewBox="0 0 520 520" fill="none" stroke="#c8f04a" stroke-width="3">
+    <circle cx="260" cy="260" r="80"/><circle cx="260" cy="260" r="140"/><circle cx="260" cy="260" r="200"/><circle cx="260" cy="260" r="255"/>
+  </svg>
+  <img src="../../JS8Call/Assets.xcassets/Logo.imageset/logo.png" alt="">
+  <div class="kicker">Field setup guide</div>
+  <h1>JS8 Firefly on iPhone</h1>
+  <div class="sub">Hooking up and testing the QRP Labs QMX and the Digirig Lite: wiring, app settings, level setting and a first on-air check.</div>
+  <div class="contents">
+    <div><b>1</b> Read this first: two hookups</div>
+    <div><b>5</b> Setup B: Digirig Lite + radio</div>
+    <div><b>2</b> What you need</div>
+    <div><b>6</b> First on-air test</div>
+    <div><b>3</b> App first run and bench test</div>
+    <div><b>7</b> Quick reference card</div>
+    <div><b>4</b> Setup A: QMX direct to iPhone</div>
+    <div><b>8</b> Troubleshooting</div>
+  </div>
+</div>
+
+<!-- ============ 1. READ FIRST ============ -->
+<section>
+  <h2><span class="num">1</span>Read this first: two hookups</h2>
+  <p class="lede">The QMX and the Digirig Lite do the same job (getting audio between the phone and a radio), so you normally use one or the other, not both together.</p>
+
+  <div class="callout key">
+    <span class="t">The QMX doesn't need the Digirig Lite</span>
+    <p>The QMX has a 24-bit USB sound card built in. One USB-C data cable from the QMX to the iPhone carries receive and transmit audio. It has no analog line input for digital modes, so there's nowhere to plug the Digirig into for JS8. Out of the box the QMX only transmits when a computer sends it a CAT command, which an iPhone can't do. So you turn on the QMX's own <b>Digi › VOX</b> setting: then it transmits whenever audio arrives over USB, and the app just sends audio (its <span class="ui">VOX</span> PTT method).</p>
+    <p>Use the <b>Digirig Lite</b> with radios that have <i>analog</i> audio: a DATA/ACC jack or mic and speaker jacks (for example an FTDX3000 rear DATA port, an HT, or a Xiegu).</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Helvetica, Arial" font-size="13">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5a6878"/></marker>
+      </defs>
+      <!-- Row A -->
+      <text x="0" y="22" font-weight="700" fill="#6b8f00" font-size="12" letter-spacing="1">SETUP A · QMX</text>
+      <rect x="0" y="36" width="120" height="84" rx="14" fill="#0e1a2b"/>
+      <rect x="40" y="44" width="40" height="5" rx="2.5" fill="#33475f"/>
+      <text x="60" y="84" fill="#fff" text-anchor="middle" font-weight="700">iPhone</text>
+      <text x="60" y="102" fill="#9aa6b4" text-anchor="middle" font-size="11">JS8 Firefly</text>
+      <line x1="122" y1="78" x2="440" y2="78" stroke="#5a6878" stroke-width="3" marker-start="url(#ar)" marker-end="url(#ar)"/>
+      <rect x="200" y="58" width="168" height="40" rx="8" fill="#fff" stroke="#dfe5ec"/>
+      <text x="284" y="75" text-anchor="middle" font-weight="600" fill="#14202e">USB-C ⇄ USB-C</text>
+      <text x="284" y="91" text-anchor="middle" font-size="11" fill="#5a6878">data cable · audio both ways</text>
+      <rect x="444" y="36" width="160" height="84" rx="10" fill="#f4f7fa" stroke="#14202e" stroke-width="1.5"/>
+      <text x="524" y="74" text-anchor="middle" font-weight="700" fill="#14202e">QRP Labs QMX</text>
+      <text x="524" y="92" text-anchor="middle" font-size="11" fill="#5a6878">Digi mode · keys on USB audio</text>
+      <line x1="604" y1="62" x2="650" y2="62" stroke="#14202e" stroke-width="2"/>
+      <text x="656" y="58" font-size="11" fill="#5a6878">antenna</text>
+      <text x="656" y="72" font-size="11" fill="#5a6878">/ dummy load</text>
+      <line x1="604" y1="100" x2="650" y2="100" stroke="#d64545" stroke-width="2"/>
+      <text x="656" y="104" font-size="11" fill="#5a6878">9–12 V DC</text>
+
+      <!-- Row B -->
+      <text x="0" y="178" font-weight="700" fill="#2f6fd6" font-size="12" letter-spacing="1">SETUP B · DIGIRIG LITE</text>
+      <rect x="0" y="192" width="120" height="84" rx="14" fill="#0e1a2b"/>
+      <rect x="40" y="200" width="40" height="5" rx="2.5" fill="#33475f"/>
+      <text x="60" y="240" fill="#fff" text-anchor="middle" font-weight="700">iPhone</text>
+      <text x="60" y="258" fill="#9aa6b4" text-anchor="middle" font-size="11">JS8 Firefly</text>
+      <line x1="122" y1="234" x2="196" y2="234" stroke="#5a6878" stroke-width="3" marker-start="url(#ar)"/>
+      <text x="159" y="226" text-anchor="middle" font-size="10.5" fill="#5a6878">USB-C</text>
+      <rect x="198" y="208" width="130" height="52" rx="9" fill="#2f6fd6"/>
+      <text x="263" y="232" text-anchor="middle" fill="#fff" font-weight="700">Digirig Lite</text>
+      <text x="263" y="248" text-anchor="middle" fill="#d6e4fb" font-size="10.5">rev 1.1 or later</text>
+      <line x1="330" y1="234" x2="440" y2="234" stroke="#5a6878" stroke-width="3" marker-end="url(#ar)"/>
+      <text x="385" y="222" text-anchor="middle" font-size="10.5" fill="#5a6878">TRRS radio cable</text>
+      <text x="385" y="252" text-anchor="middle" font-size="10.5" fill="#5a6878">audio + PTT line</text>
+      <rect x="444" y="192" width="160" height="84" rx="10" fill="#f4f7fa" stroke="#14202e" stroke-width="1.5"/>
+      <text x="524" y="230" text-anchor="middle" font-weight="700" fill="#14202e">Analog-audio radio</text>
+      <text x="524" y="248" text-anchor="middle" font-size="11" fill="#5a6878">DATA / ACC / mic jack</text>
+      <line x1="604" y1="218" x2="650" y2="218" stroke="#14202e" stroke-width="2"/>
+      <text x="656" y="214" font-size="11" fill="#5a6878">antenna</text>
+      <text x="656" y="228" font-size="11" fill="#5a6878">/ dummy load</text>
+    </svg>
+    <figcaption>Pick the row that matches your radio. Rig (CAT) control is optional in both and isn't needed for JS8.</figcaption>
+  </figure>
+
+  <div class="two">
+    <div class="card">
+      <div class="tag">Setup A</div>
+      <h4>QMX straight to the phone</h4>
+      <ul>
+        <li>PTT method: <span class="ui">VOX – audio on both channels</span></li>
+        <li>Radio mode: <b>Digi</b>; QMX menu <b>Digi › VOX = ON</b></li>
+        <li>Tune the QMX dial by hand to match the app</li>
+        <li>No CAT on iPhone (iOS blocks USB serial ports)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="tag">Setup B</div>
+      <h4>Digirig Lite + analog radio</h4>
+      <ul>
+        <li>PTT method: <span class="ui">Digirig Lite – PTT tone (right ch.)</span></li>
+        <li>Radio mode: <b>USB / DATA-U</b>, data input from the rear/ACC jack</li>
+        <li>JS8 audio on the left channel, keying tone on the right</li>
+        <li>The Lite has no serial port, so no CAT through it</li>
+      </ul>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============ 2. WHAT YOU NEED ============ -->
+<section>
+  <h2><span class="num">2</span>What you need</h2>
+  <p class="lede">Lay everything out before you start. Check items off as you go.</p>
+
+  <h3>Common to both setups</h3>
+  <ul class="check">
+    <li><b>iPhone with JS8 Firefly installed</b> (from Xcode or TestFlight). iPhone 15 or later has USB-C. On a Lightning iPhone, use Apple's <i>Lightning to USB 3 Camera Adapter</i>, ideally with a charger plugged into its pass-through port.</li>
+    <li><b>Your callsign and 4- or 6-character grid locator</b> (for example EM73 or EM73tu).</li>
+    <li><b>A dummy load</b> for the transmit tests, or a matched antenna you're licensed to transmit on.</li>
+    <li><b>Accurate time.</b> Leave <i>Settings › General › Date &amp; Time › Set Automatically</i> on. JS8 needs your clock within about ±1 second of UTC.</li>
+  </ul>
+
+  <h3>Setup A: QMX</h3>
+  <ul class="check">
+    <li><b>QMX</b> with a 9–12 V DC supply on the 2.1 mm barrel jack (USB doesn't power the transmitter).</li>
+    <li><b>USB-C to USB-C data cable.</b> Some cheap cables only carry charging power and won't work; if the phone doesn't see the radio, try another cable first.</li>
+    <li>Recent QMX firmware (1.04 or later recommended; it shows a flashing <b>E</b> when Digi audio is missing or too low, which is useful for testing).</li>
+  </ul>
+
+  <h3>Setup B: Digirig Lite</h3>
+  <ul class="check">
+    <li><b>Digirig Lite</b>, revision 1.1 or later. Revision 1.2 (the USB-C version) is best: it has a PTT indicator LED and better tone keying.</li>
+    <li><b>The Digirig audio cable for your radio</b> (TRRS on the Digirig end). Digirig sells ready-made cables for common Icom, Yaesu, Elecraft, Xiegu and Baofeng models.</li>
+    <li>A short USB-C cable between the Lite and the phone (or plug the Lite in directly if it fits).</li>
+    <li>Optional: a USB isolator or ferrites if RF gets into the audio (hum, PTT stuck on, the app restarting while you transmit).</li>
+  </ul>
+
+  <div class="callout stop">
+    <span class="t">Safety first</span>
+    <p>Do every transmit test into a dummy load or a matched antenna. Never key a transmitter with nothing on the antenna port. Transmitting needs an amateur licence; until you're ready, use <span class="ui">TX Off</span> or tap <span class="ui">Just listen for now</span> at first launch.</p>
+  </div>
+</section>
+
+<!-- ============ 3. FIRST RUN ============ -->
+<section>
+  <h2><span class="num">3</span>App first run and bench test</h2>
+  <p class="lede">Do this with no radio connected. It confirms the app, clock and audio pipeline work before any hardware is involved.</p>
+
+  <ol class="steps">
+    <li><b>Open JS8 Firefly.</b> Enter your callsign and grid on the welcome screen and tap <span class="ui">Get on the air</span>. Allow notifications if you want alerts for messages sent to you. Allow microphone access when iOS asks; the app can't receive without it.
+      <span class="expect">Your callsign and grid show at the top left of the Live tab.</span></li>
+    <li><b>Get to know the tabs.</b> <span class="ui">Live</span> (waterfall + band activity), <span class="ui">Chat</span> (conversation), <span class="ui">Stations</span> (who you've heard), <span class="ui">Inbox</span> (stored messages) and <span class="ui">Settings</span>.</li>
+    <li><b>Check the clock.</b> Go to <span class="path">Settings<span class="sep">›</span>Time</span>. <i>UTC (corrected)</i> should match a reference such as time.gov to within a second.</li>
+    <li><b>Check audio with no interface plugged in.</b> Go to <span class="path">Settings<span class="sep">›</span>Audio &amp; PTT</span>. It should say <i>No USB audio interface — using built-in audio</i>. Back on Live, talk or tap near the phone.
+      <span class="expect">The waterfall reacts to sound from the iPhone's microphone.</span></li>
+    <li><b>Turn TX off for now.</b> In the button row above the message box, tap <span class="ui">TX On</span> so it reads <span class="ui">TX Off</span>. You'll turn it back on for the transmit tests.</li>
+  </ol>
+
+  <h3>The screen at a glance</h3>
+  <table>
+    <tr><th style="width:28%">Item</th><th>What it does</th></tr>
+    <tr><td class="k">Period ring</td><td>Counts down the current JS8 time slot; shows <b>RX</b> or a red <b>TX</b>.</td></tr>
+    <tr><td class="k">Band / dial (top right)</td><td>Tap to pick a JS8 calling frequency or type a custom dial. Without rig control, set the radio to match by hand.</td></tr>
+    <tr><td class="k">Speed badge</td><td>Slow / Normal / Fast / Turbo / Ultra. Use <b>Normal</b> to start; most JS8 traffic is there.</td></tr>
+    <tr><td class="k">Level bar (under header)</td><td>Live receive level. Tap it to open the <span class="ui">Levels</span> panel.</td></tr>
+    <tr><td class="k">Waterfall</td><td>Signals across the 0–3000 Hz passband. Tap or drag to move your transmit offset (the marker).</td></tr>
+    <tr><td class="k">Button row</td><td><span class="ui">CQ</span> · <span class="ui">HB</span> (heartbeat) · <span class="ui">Tune</span> · <span class="ui">Levels</span> · <span class="ui">Auto</span> (auto-reply) · <span class="ui">TX On/Off</span></td></tr>
+    <tr><td class="k">⌘ menu + message box</td><td>Canned queries (SNR?, GRID?, INFO?…), MSG / relay inserts, and free text. The arrow sends at the next time slot; <span class="ui">Halt</span> stops a transmission.</td></tr>
+  </table>
+</section>
+
+<!-- ============ 4. SETUP A ============ -->
+<section>
+  <h2><span class="num">4</span>Setup A: QMX direct to iPhone</h2>
+  <p class="lede">One cable, no interface box. Work through receive first, then a transmit test into a dummy load.</p>
+
+  <h3>4.1 Prepare the radio</h3>
+  <ol class="steps">
+    <li><b>Connect the dummy load (or antenna) and the DC supply, then power on the QMX.</b></li>
+    <li><b>Select Digi mode</b> on the QMX.</li>
+    <li><b>Turn on the QMX's VOX.</b> In the QMX menu go to <b>Digi › VOX</b> and set it to <b>ON</b> (the default is OFF). Then in <b>System config › CAT timeout</b>, choose <b>DISABLED</b>; otherwise the QMX drops out of transmit after the timeout because no CAT command arrives.
+      <span class="expect">Without this step the QMX receives fine but never transmits from the iPhone.</span></li>
+    <li><b>Set the dial to a JS8 frequency:</b> 7.078 MHz (40 m) or 14.078 MHz (20 m) are the busiest. The QMX dial should match exactly what the app shows at the top right.</li>
+  </ol>
+
+  <h3>4.2 Connect and configure the app</h3>
+  <ol class="steps">
+    <li><b>Plug the USB-C cable</b> between the QMX and the iPhone.
+      <span class="expect"><span class="path">Settings<span class="sep">›</span>Audio &amp; PTT</span> shows <i>USB audio interface detected</i>, and <i>Route</i> names the QMX.</span>
+      If it doesn't, tap <span class="ui">Restart audio</span> at the bottom of that section, then try another cable.</li>
+    <li><b>Set PTT method to <span class="ui">VOX – audio on both channels</span>.</b> This matters: the Digirig tone setting would put a 1 kHz keying tone into the QMX along with the JS8 signal.</li>
+    <li><b>Input channel: <span class="ui">Left</span>.</b> If the waterfall stays blank later, try <span class="ui">Mix</span>.</li>
+    <li><b>Rig Control › Connection: <span class="ui">None</span>.</b> iPhone apps can't open the QMX's USB serial (CAT) port, so you set the frequency on the radio.</li>
+    <li><b>Match the band in the app.</b> Tap the dial at the top right and pick the same band you set on the QMX (for example 40m · 7.078.000).</li>
+  </ol>
+
+  <h3>4.3 Set receive level</h3>
+  <ol class="steps">
+    <li><b>Tap <span class="ui">Levels</span></b> (or the thin level bar under the header).</li>
+    <li><b>On a quiet part of the band, aim for about 30 dB</b>, inside the green "Good" zone.
+      <div class="meter"><div style="width:16.7%;background:#d64545">too low</div><div style="width:11.1%;background:#c98a00"></div><div style="width:22.2%;background:#2f9e5b">good 25–45</div><div style="width:16.7%;background:#c98a00">a little hot</div><div style="width:33.3%;background:#d64545">too hot</div></div>
+      <div class="meter-scale"><span>0</span><span>30</span><span>60</span><span>90 dB</span></div>
+      If the app shows an <span class="ui">RX gain</span> slider, use it. If it doesn't, the QMX's USB audio has no adjustable input on the phone side, so change the level from the QMX's audio settings instead (see the QMX operating manual).</li>
+    <li><b>Watch the waterfall.</b> On an open band you'll see JS8 signals as short stacked bursts, and decodes appear in band activity within one or two time slots (15 s each in Normal).</li>
+  </ol>
+
+  <h3>4.4 Transmit test (into the dummy load)</h3>
+  <ol class="steps">
+    <li><b>Turn <span class="ui">TX On</span></b>. Turn the iPhone volume all the way up and set <span class="ui">TX level</span> to about 90%. The QMX only keys once the audio is near the top of its range (its <i>Digi › Rise threshold</i> defaults to 80%).</li>
+    <li><b>Open <span class="ui">Levels</span> and press <span class="ui">Tune (key a steady carrier)</span>.</b>
+      <span class="expect">The QMX switches to transmit and shows output power. The app shows TUNING.</span></li>
+    <li><b>If the QMX shows a flashing <i>E</i> or doesn't transmit,</b> first check <b>Digi › VOX</b> is ON on the QMX. Then make sure the iPhone volume is at maximum and raise <span class="ui">TX level</span> toward 100%.</li>
+    <li><b>Press <span class="ui">Stop tune</span></b>, or close the Levels panel (Tune always stops when the panel closes).</li>
+  </ol>
+
+  <div class="callout key">
+    <span class="t">The QMX has no ALC to watch</span>
+    <p>In Digi mode the QMX measures the frequency of the incoming tone and transmits one clean carrier at that frequency. Output power is set by the radio, not by audio level. Strong, clean audio is what it needs, so run TX level and the iPhone volume high; that doesn't add power or splatter.</p>
+  </div>
+  <div class="callout warn">
+    <span class="t">With VOX on, any sound from the phone transmits</span>
+    <p>Notification sounds, keyboard clicks or music from another app would go out over the air. Turn on Do Not Disturb (or a Focus), switch off keyboard clicks, and don't play other audio while the QMX is connected.</p>
+  </div>
+</section>
+
+<!-- ============ 5. SETUP B ============ -->
+<section class="flow">
+  <h2><span class="num">5</span>Setup B: Digirig Lite + analog radio</h2>
+  <p class="lede">For radios with a DATA/ACC jack or mic and speaker audio. The most important step is proving the tone PTT keys the radio.</p>
+
+  <h3>5.1 Prepare the radio</h3>
+  <ol class="steps">
+    <li><b>Connect the dummy load or antenna.</b></li>
+    <li><b>Mode: USB-DATA / DATA-U</b> (or plain USB if the radio has no data mode). Turn speech processing off.</li>
+    <li><b>Route data audio from the rear/ACC jack.</b> Many radios have a menu for this (for example DATA IN select / DATA MOD source = REAR). Turn the radio's own VOX <b>off</b>; the Digirig keys the PTT line directly.</li>
+    <li><b>Set the dial</b> to 7.078 or 14.078 MHz.</li>
+  </ol>
+
+  <h3>5.2 Connect and configure the app</h3>
+  <ol class="steps">
+    <li><b>Plug the radio cable into the Digirig's TRRS jack and the Lite's USB-C into the iPhone.</b>
+      <span class="expect">The Lite's power LED comes on (rev 1.2), and Settings shows <i>USB audio interface detected</i>.</span></li>
+    <li><b>PTT method: <span class="ui">Digirig Lite – PTT tone (right ch.)</span>.</b> The defaults are a good start:
+      <table style="margin-top:6pt">
+        <tr><th>Setting</th><th>Default</th><th>Notes</th></tr>
+        <tr><td class="k">PTT tone</td><td class="mono">1000 Hz</td><td>Digirig suggests 1 kHz. Higher (1500–2000 Hz) may key faster.</td></tr>
+        <tr><td class="k">Tone level</td><td class="mono">70%</td><td>Raise if PTT drops out or doesn't key.</td></tr>
+        <tr><td class="k">Swap channels</td><td>Off</td><td>Turn on only if your cable or unit expects the tone on the left.</td></tr>
+        <tr><td class="k">PTT lead / tail</td><td class="mono">150 / 100 ms</td><td>Gives the relay time to close before audio starts.</td></tr>
+      </table></li>
+    <li><b>Input channel: <span class="ui">Left</span></b> (try <span class="ui">Mix</span> if there's no receive audio).</li>
+    <li><b>Rig Control: <span class="ui">None</span></b> unless you have a Bluetooth LE serial adapter or a network rig server (rigctld / flrig). The Lite has no serial port.</li>
+  </ol>
+
+  <div class="callout warn">
+    <span class="t">Why tone PTT?</span>
+    <p>On a computer the Digirig Lite keys the radio from a GPIO pin on its sound chip. iOS doesn't let apps touch that pin, so the app plays a steady tone on the <i>right</i> audio channel instead. The Lite's VOX circuit hears that tone and pulls the radio's PTT line. Digirig calls this method experimental; it works best on board revision 1.2 and isn't wired up on revision 1.0.</p>
+  </div>
+
+  <h3>5.3 Prove PTT keying (most important test)</h3>
+  <ol class="steps">
+    <li><b>Turn <span class="ui">TX On</span></b> and set the iPhone volume to about 75%.</li>
+    <li><b>Open <span class="ui">Levels</span> and press <span class="ui">Tune</span>.</b>
+      <span class="expect">The Lite's PTT LED lights, the radio goes to TX and shows output power.</span></li>
+    <li><b>LED lights but the radio doesn't transmit:</b> check the cable and the radio's data-PTT settings.</li>
+    <li><b>Nothing happens:</b> raise <span class="ui">Tone level</span> toward 100% and the phone volume, then try a 1500 or 2000 Hz tone. Check the board revision (tone PTT doesn't work on rev 1.0).</li>
+    <li><b>Radio stays in TX after you stop:</b> lower the tail time, and check for RF getting into the cable (add ferrites or a USB isolator).</li>
+  </ol>
+
+  <h3>5.4 Set levels</h3>
+  <ol class="steps">
+    <li><b>Receive:</b> aim for about 30 dB on a quiet part of the band. The Lite's input level is mostly set by the radio's data/line-out level menu.</li>
+    <li><b>Transmit:</b> with <span class="ui">Tune</span> running, raise <span class="ui">TX level</span> until the radio's <b>ALC just starts to move, then back off a little</b>. Little or no ALC means a clean signal. If power doesn't rise as you go up, you've passed the clean point, so back off.</li>
+  </ol>
+
+  <div class="callout warn">
+    <span class="t">If the tone PTT won't stay reliable</span>
+    <p>Some radios (like the FTDX3000) can be keyed by CAT instead. On iPhone that means a Bluetooth LE serial adapter on the radio's CAT port, or rigctld / flrig running on a computer or Raspberry Pi on the same Wi-Fi. Then set PTT method to <span class="ui">CAT / rig control command</span>.</p>
+  </div>
+</section>
+
+<!-- ============ 6. ON AIR ============ -->
+<section>
+  <h2><span class="num">6</span>First on-air test</h2>
+  <p class="lede">Swap the dummy load for an antenna. Listen first, then make a short transmission.</p>
+
+  <h3>6.1 Listen</h3>
+  <ol class="steps">
+    <li><b>Pick a band that's open</b> (20 m in the daytime, 40 m in the late afternoon and evening). Keep the speed on <b>Normal</b>, and leave <span class="path">Settings<span class="sep">›</span>JS8<span class="sep">›</span>Decode all speeds</span> on.</li>
+    <li><b>Wait two or three minutes.</b>
+      <span class="expect">Callsigns appear in band activity and in the Stations tab, with SNR and offset.</span></li>
+    <li><b>Check the timing.</b> In <span class="path">Settings<span class="sep">›</span>Time</span>, <i>Median decode Δt</i> should be within about ±0.5 s. If it's larger, tap <span class="ui">Sync clock to received signals</span>.</li>
+  </ol>
+
+  <h3>6.2 Transmit</h3>
+  <ol class="steps">
+    <li><b>Pick a clear spot.</b> Tap an empty part of the waterfall between about 500 and 2500 Hz to move your offset there.</li>
+    <li><b>Send a heartbeat:</b> tap <span class="ui">HB</span>. (Heartbeats normally go between 500 and 1000 Hz; the app takes care of this unless you turned on <i>HB anywhere</i>.)
+      <span class="expect">The period ring turns red and shows TX, and the radio transmits for about 13 seconds.</span></li>
+    <li><b>Watch for replies.</b> Other stations' heartbeat acknowledgements show up in band activity.</li>
+    <li><b>Try a directed query.</b> On the Stations tab, long-press a station you can hear well and choose <span class="ui">Ask SNR?</span>. If they hear you, they'll answer with a signal report.</li>
+    <li><b>Have a QSO.</b> Select a station, type a message (for example <span class="mono">HW CPY? QRP 5W</span>) and send. End with <span class="mono">73</span> or <span class="mono">SK</span> from the ⌘ menu.</li>
+  </ol>
+
+  <div class="callout">
+    <span class="t">Good habits</span>
+    <ul style="padding-left:14pt;margin:4pt 0 0">
+      <li>Leave <i>Confirm auto-replies</i> on at first, so you approve every automatic answer before it goes out.</li>
+      <li>Keep the iPhone volume where you set it during Tune. Changing it changes your TX drive.</li>
+      <li>Background receive keeps running when you leave the app, but the phone has to stay connected and powered. Long sessions drain the battery.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 7. QUICK REFERENCE ============ -->
+<section>
+  <h2><span class="num">7</span>Quick reference card</h2>
+  <p class="lede">Settings side by side. Print this page and keep it with your go-kit.</p>
+
+  <table class="tight">
+    <tr><th style="width:26%">Setting</th><th style="width:37%">Setup A · QMX</th><th>Setup B · Digirig Lite</th></tr>
+    <tr><td class="k">Cable</td><td>USB-C data cable, QMX → iPhone</td><td>Digirig radio cable (TRRS) + USB-C to iPhone</td></tr>
+    <tr><td class="k">Radio mode</td><td>Digi; <b>Digi › VOX = ON</b>; CAT timeout DISABLED</td><td>USB-DATA / DATA-U, rear data input, radio VOX off</td></tr>
+    <tr><td class="k">PTT method</td><td><span class="ui">VOX – audio on both channels</span></td><td><span class="ui">Digirig Lite – PTT tone (right ch.)</span></td></tr>
+    <tr><td class="k">PTT tone / level</td><td>(not used)</td><td>1000 Hz / 70% to start</td></tr>
+    <tr><td class="k">Input channel</td><td>Left (or Mix)</td><td>Left (or Mix)</td></tr>
+    <tr><td class="k">Rig control</td><td>None: set the QMX dial by hand</td><td>None, or BLE serial / rigctld / flrig</td></tr>
+    <tr><td class="k">RX level target</td><td>~30 dB (green zone 25–45)</td><td>~30 dB (green zone 25–45)</td></tr>
+    <tr><td class="k">TX level</td><td>~90–100%</td><td>ALC just moving, then back off</td></tr>
+    <tr><td class="k">iPhone volume</td><td>Maximum</td><td>~75%, fixed</td></tr>
+    <tr><td class="k">Speed to start</td><td>Normal (15 s)</td><td>Normal (15 s)</td></tr>
+  </table>
+
+  <h3>JS8 calling frequencies (USB dial)</h3>
+  <table class="tight">
+    <tr><th>Band</th><th>Dial</th><th>Band</th><th>Dial</th><th>Band</th><th>Dial</th></tr>
+    <tr><td class="k">160 m</td><td class="mono">1.842</td><td class="k">30 m</td><td class="mono">10.130</td><td class="k">12 m</td><td class="mono">24.922</td></tr>
+    <tr><td class="k">80 m</td><td class="mono">3.578</td><td class="k">20 m</td><td class="mono">14.078</td><td class="k">10 m</td><td class="mono">28.078</td></tr>
+    <tr><td class="k">60 m</td><td class="mono">5.357</td><td class="k">17 m</td><td class="mono">18.104</td><td class="k">6 m</td><td class="mono">50.318</td></tr>
+    <tr><td class="k">40 m</td><td class="mono">7.078</td><td class="k">15 m</td><td class="mono">21.078</td><td class="k">2 m</td><td class="mono">144.178</td></tr>
+  </table>
+
+  <h3>Pre-flight checklist</h3>
+  <ul class="check cols">
+    <li>Antenna or dummy load connected, radio powered</li>
+    <li>Radio mode and dial match the app's band</li>
+    <li>QMX only: <b>Digi › VOX = ON</b>, CAT timeout disabled</li>
+    <li><i>USB audio interface detected</i> in Settings › Audio &amp; PTT</li>
+    <li>Correct PTT method for this hookup</li>
+    <li>RX meter in the green on a quiet part of the band</li>
+    <li>Tune test keys the radio; TX level set</li>
+    <li>Clock correct (Δt within ±0.5 s once decoding)</li>
+    <li><span class="ui">TX On</span></li>
+  </ul>
+</section>
+
+<!-- ============ 8. TROUBLESHOOTING ============ -->
+<section>
+  <h2><span class="num">8</span>Troubleshooting</h2>
+  <p class="lede">Problems roughly in the order you'll hit them.</p>
+  <table class="tight">
+    <tr><th style="width:27%">Symptom</th><th style="width:28%">Likely cause</th><th>Fix</th></tr>
+    <tr><td class="k">"No USB audio interface"</td><td>Charge-only cable, loose plug, or (Lightning) adapter without power</td><td>Try a known data cable; reseat; tap <span class="ui">Restart audio</span>; power the camera adapter.</td></tr>
+    <tr><td class="k">Meter says "No audio — check cable / channel"</td><td>Wrong input channel, radio volume/data out at zero, mic access denied</td><td>Try <span class="ui">Mix</span>; raise the radio's data-out level; iOS Settings › JS8 Firefly › Microphone on.</td></tr>
+    <tr><td class="k">Meter "Clipping" / "Too hot"</td><td>Radio audio-out too high</td><td>Lower the RX gain slider or the radio's data/line-out level until you're near 30 dB.</td></tr>
+    <tr><td class="k">Signals on waterfall, no decodes</td><td>Clock off, wrong speed, or radio not on USB/Digi</td><td>Check Settings › Time Δt and sync; turn on <i>Decode all speeds</i>; check the radio mode and dial.</td></tr>
+    <tr><td class="k">QMX receives but never transmits</td><td>QMX <i>Digi › VOX</i> is OFF (the default), so it waits for a CAT command</td><td>QMX menu: <b>Digi › VOX = ON</b> and <b>System config › CAT timeout = DISABLED</b>.</td></tr>
+    <tr><td class="k">QMX flashing <i>E</i> / keys unreliably</td><td>TX audio too low, or PTT method set to Digirig tone</td><td>Set app PTT to <span class="ui">VOX</span>; iPhone volume to max; TX level 90–100%.</td></tr>
+    <tr><td class="k">Digirig: radio never keys</td><td>Tone too weak or wrong channel; rev 1.0 board</td><td>Tone level 100%, raise phone volume, try 1500–2000 Hz, try <i>Swap channels</i>; check the board revision.</td></tr>
+    <tr><td class="k">Digirig: PTT chatters or drops mid-transmission</td><td>Tone level marginal, or RF feedback</td><td>Raise tone level; add ferrites / USB isolator; check the antenna match.</td></tr>
+    <tr><td class="k">Radio stuck in TX</td><td>RF getting into the audio cable</td><td>Tap <span class="ui">Halt</span> or <span class="ui">TX Off</span>; unplug the cable; fix grounding, add chokes.</td></tr>
+    <tr><td class="k">Tune button greyed / "TX is off"</td><td>TX disabled</td><td>Tap <span class="ui">TX Off</span> so it reads <span class="ui">TX On</span>.</td></tr>
+    <tr><td class="k">Others can't decode you</td><td>Overdriven audio (splatter), or you're off-frequency</td><td>Redo the Tune / ALC step; make sure the radio dial matches the app band exactly.</td></tr>
+    <tr><td class="k">"CAT PTT needs a rig connection"</td><td>PTT method is CAT with no rig connected</td><td>Pick VOX (QMX) or Digirig tone (Lite), or set up a BLE / network rig link.</td></tr>
+  </table>
+
+  <div class="foot">JS8 Firefly is GPL-3.0, derived from JS8Call, and isn't affiliated with JS8Call or WSJT-X. QMX details: QRP Labs QMX operating manual (firmware 1_03_002). Digirig details: digirig.net.</div>
+</section>
+
+</body>
+</html>

@@ -42,6 +42,10 @@ final class AppModel {
     private(set) var spectrum: [Float] = []
     private(set) var markers: [DecodeMarker] = []
     private(set) var inputLevel: Float = -120
+    /// When the input last came within 0.5 dB of full scale.
+    private(set) var lastClip = Date.distantPast
+    /// Hardware RX gain, or nil when the audio interface doesn't expose one.
+    private(set) var inputGain: Float?
     private(set) var isTransmitting = false
     private(set) var isTuning = false
     private(set) var txText = ""
@@ -109,7 +113,14 @@ final class AppModel {
         guard !started else { return }
         started = true
         audio.onError = { [weak self] msg in DispatchQueue.main.async { self?.lastError = msg } }
-        audio.onInputLevel = { [weak self] l in DispatchQueue.main.async { self?.inputLevel = l } }
+        audio.onInputLevel = { [weak self] l, peak in
+            DispatchQueue.main.async {
+                self?.inputLevel = l
+                if peak >= 0.944 { self?.lastClip = Date() }
+            }
+        }
+        audio.outputLevel = settings.tx.outputLevel
+        audio.preferredInputGain = settings.inputGain
         audio.spectrum.onRow = { [weak self] row in self?.waterfall.add(row: row) }
         audio.inputChannel = settings.inputChannel
         #if os(macOS)
@@ -125,6 +136,7 @@ final class AppModel {
                 self.audioRunning = self.audio.inputRunning
                 self.routeDescription = self.audio.routeDescription
                 self.usbConnected = self.audio.isUSBInterfaceConnected
+                self.inputGain = self.audio.inputGain
             }
         }
 
@@ -139,6 +151,7 @@ final class AppModel {
                 }
                 self.routeDescription = self.audio.routeDescription
                 self.usbConnected = self.audio.isUSBInterfaceConnected
+                self.inputGain = self.audio.inputGain
             }
         }
         NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] note in
@@ -185,6 +198,12 @@ final class AppModel {
         applyStationSettings()
         AppClock.offset = settings.clockOffset
         audio.inputChannel = settings.inputChannel
+        audio.outputLevel = settings.tx.outputLevel
+        if settings.inputGain != old.inputGain {
+            audio.preferredInputGain = settings.inputGain
+            audio.applyInputGain()
+            inputGain = audio.inputGain
+        }
         waterfall.contrastDB = settings.waterfallContrast
         waterfall.brightness = settings.waterfallBrightness
         if settings.rig != old.rig { rig.configure(settings.rig) }
@@ -196,6 +215,7 @@ final class AppModel {
             applyMacDevices()
             audio.restart()
             routeDescription = audio.routeDescription
+            inputGain = audio.inputGain
         }
         #endif
         settings.save()

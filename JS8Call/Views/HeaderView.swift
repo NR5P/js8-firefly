@@ -5,6 +5,7 @@ import JS8Core
 struct HeaderView: View {
     @Environment(AppModel.self) private var model
     @State private var showBands = false
+    @State private var showLevels = false
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 0.1)) { ctx in
@@ -63,13 +64,20 @@ struct HeaderView: View {
             )
             .overlay(alignment: .bottom) {
                 LevelBar(level: model.inputLevel, transmitting: model.isTransmitting)
-                    .frame(height: 2)
+                    .frame(height: 3)
+                    .frame(height: 10, alignment: .bottom)
+                    .contentShape(Rectangle())
+                    .onTapGesture { showLevels = true }
             }
             .id(ctx.date.timeIntervalSince1970 > 0)
         }
         .sheet(isPresented: $showBands) {
             BandPickerSheet()
                 .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showLevels) {
+            LevelsSheet()
+                .presentationDetents([.fraction(0.85), .large])
         }
     }
 

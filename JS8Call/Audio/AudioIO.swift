@@ -86,6 +86,8 @@ final class AudioIO: @unchecked Sendable {
     private let processingQueue = DispatchQueue(label: "js8.audio.rx", qos: .userInitiated)
     private let txLock = OSAllocatedUnfairLock<TxPlayback?>(initialState: nil)
     private var outputRate: Double = 48000
+    private let outputLevelLock = OSAllocatedUnfairLock<Float>(initialState: 0.5)
+    private var renderOutputLevel: Float = 0.5   // render-thread copy
     private(set) var inputRunning = false
     private(set) var outputRunning = false
 
@@ -93,7 +95,16 @@ final class AudioIO: @unchecked Sendable {
     var inputChannel = 0
     /// dBFS of the most recent input block.
     private(set) var inputLevel: Float = -120
-    var onInputLevel: ((Float) -> Void)?
+    /// RMS level (dBFS) and peak sample (0...1) of each input block.
+    var onInputLevel: ((Float, Float) -> Void)?
+    /// Hardware input gain (0...1) to apply when the interface exposes one.
+    var preferredInputGain: Float?
+
+    /// TX audio level, applied immediately, including to a transmission in progress.
+    var outputLevel: Float {
+        get { outputLevelLock.withLock { $0 } }
+        set { outputLevelLock.withLock { $0 = newValue } }
+    }
     var onError: ((String) -> Void)?
 
     #if os(macOS)
@@ -158,9 +169,30 @@ final class AudioIO: @unchecked Sendable {
         #endif
     }
 
+    /// Current hardware input gain, or nil if this interface doesn't expose one.
+    var inputGain: Float? {
+        #if os(iOS)
+        let session = AVAudioSession.sharedInstance()
+        return session.isInputGainSettable ? session.inputGain : nil
+        #else
+        return (inputDeviceID ?? MacAudioDevices.defaultInput()).flatMap { MacAudioDevices.inputVolume(of: $0) }
+        #endif
+    }
+
+    func applyInputGain() {
+        guard let gain = preferredInputGain else { return }
+        #if os(iOS)
+        let session = AVAudioSession.sharedInstance()
+        if session.isInputGainSettable { try? session.setInputGain(gain) }
+        #else
+        if let id = inputDeviceID ?? MacAudioDevices.defaultInput() { MacAudioDevices.setInputVolume(of: id, gain) }
+        #endif
+    }
+
     // MARK: Start / stop
 
     func start() {
+        applyInputGain()
         startInput()
         startOutput()
     }
@@ -218,6 +250,7 @@ final class AudioIO: @unchecked Sendable {
         let dst = mono.floatChannelData![0]
         let ch = inputChannel
         var sumsq: Float = 0
+        var peak: Float = 0
         for i in 0..<frames {
             var v: Float
             if ch < 0 || channels == 1 {
@@ -229,6 +262,7 @@ final class AudioIO: @unchecked Sendable {
             }
             dst[i] = v
             sumsq += v * v
+            peak = max(peak, abs(v))
         }
         let level = 10 * log10f(max(sumsq / Float(max(frames, 1)), 1e-12))
         inputLevel = level
@@ -267,7 +301,7 @@ final class AudioIO: @unchecked Sendable {
                 self.ring.write(bp, time: time)
                 self.spectrum.process(bp)
             }
-            self.onInputLevel?(level)
+            self.onInputLevel?(level, peak)
         }
     }
 
@@ -350,6 +384,8 @@ final class AudioIO: @unchecked Sendable {
 
         let rate = playback.rate
         let s = playback.settings
+        if let l = outputLevelLock.withLockIfAvailable({ $0 }) { renderOutputLevel = l }
+        let level = renderOutputLevel
         if playback.cursor == nil {
             var wall = AppClock.nowSeconds()
             if timestamp.pointee.mFlags.contains(.hostTimeValid) {
@@ -375,14 +411,14 @@ final class AudioIO: @unchecked Sendable {
         for i in 0..<frames {
             var payload: Float = 0
             if cursor >= 0 && cursor < count {
-                payload = playback.payload[cursor] * s.outputLevel
+                payload = playback.payload[cursor] * level
             } else if playback.isTune && cursor >= 0 {
-                payload = playback.payload[cursor % count] * s.outputLevel
+                payload = playback.payload[cursor % count] * level
             }
             var tone: Float = 0
             if s.pttMethod == .digirigTone && cursor >= -leadFrames && cursor < endFrame {
                 let fromStart = cursor + leadFrames
-                let toEnd = endFrame - cursor
+                let toEnd = playback.isTune ? Int.max : endFrame - cursor   // tune never ends; avoid Int.max overflow
                 let env = Float(min(1, Double(min(fromStart, toEnd)) / Double(ramp)))
                 tone = Float(sin(playback.tonePhase)) * s.toneLevel * env
                 playback.tonePhase += dphi
@@ -432,6 +468,43 @@ enum MacAudioDevices {
         return ids.compactMap { id in
             guard let name = name(of: id) else { return nil }
             return Device(id: id, name: name, inputs: channels(id, input: true), outputs: channels(id, input: false), isUSB: isUSB(id))
+        }
+    }
+
+    static func defaultInput() -> AudioDeviceID? {
+        var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice, mScope: kAudioObjectPropertyScopeGlobal,
+                                              mElement: kAudioObjectPropertyElementMain)
+        var id = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &id) == noErr, id != 0 else { return nil }
+        return id
+    }
+
+    /// Settable input volume elements: the main element, else per-channel (1, 2).
+    private static func inputVolumeAddresses(_ id: AudioDeviceID) -> [AudioObjectPropertyAddress] {
+        func settable(_ element: AudioObjectPropertyElement) -> AudioObjectPropertyAddress? {
+            var addr = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyVolumeScalar, mScope: kAudioDevicePropertyScopeInput,
+                                                  mElement: element)
+            var ok: DarwinBoolean = false
+            guard AudioObjectHasProperty(id, &addr), AudioObjectIsPropertySettable(id, &addr, &ok) == noErr, ok.boolValue else { return nil }
+            return addr
+        }
+        if let main = settable(kAudioObjectPropertyElementMain) { return [main] }
+        return [1, 2].compactMap { settable($0) }
+    }
+
+    static func inputVolume(of id: AudioDeviceID) -> Float? {
+        guard var addr = inputVolumeAddresses(id).first else { return nil }
+        var v: Float32 = 0
+        var size = UInt32(MemoryLayout<Float32>.size)
+        guard AudioObjectGetPropertyData(id, &addr, 0, nil, &size, &v) == noErr else { return nil }
+        return v
+    }
+
+    static func setInputVolume(of id: AudioDeviceID, _ value: Float) {
+        for var addr in inputVolumeAddresses(id) {
+            var v = Float32(value)
+            AudioObjectSetPropertyData(id, &addr, 0, nil, UInt32(MemoryLayout<Float32>.size), &v)
         }
     }
 

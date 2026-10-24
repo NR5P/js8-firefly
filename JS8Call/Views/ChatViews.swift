@@ -273,6 +273,7 @@ struct ComposeBar: View {
 /// CQ / Heartbeat / Tune / TX-enable buttons.
 struct ControlStrip: View {
     @Environment(AppModel.self) private var model
+    @State private var showLevels = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -286,6 +287,9 @@ struct ControlStrip: View {
             ControlButton(title: model.isTuning ? "Stop" : "Tune", icon: "tuningfork", active: model.isTuning, color: Theme.warn) {
                 model.isTuning ? model.stopTune() : model.startTune()
             }
+            ControlButton(title: "Levels", icon: "slider.vertical.3", active: false, color: Theme.accent) {
+                showLevels = true
+            }
             ControlButton(title: "Auto", icon: "arrowshape.turn.up.left.2.fill", active: model.settings.station.autoReply, color: Theme.accent2) {
                 model.settings.station.autoReply.toggle()
             }
@@ -294,6 +298,9 @@ struct ControlStrip: View {
                 model.settings.txEnabled.toggle()
                 if !model.settings.txEnabled { model.halt() }
             }
+        }
+        .sheet(isPresented: $showLevels) {
+            LevelsSheet().presentationDetents([.fraction(0.85), .large])
         }
     }
 }

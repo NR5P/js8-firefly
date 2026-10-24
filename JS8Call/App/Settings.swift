@@ -14,6 +14,8 @@ struct AppSettings: Codable, Equatable {
     var txDelay: Double = 0.2
     var rig = RigSettings()
     var inputChannel = 0
+    /// Hardware RX gain (0...1); nil until the user sets it. Optional so older saved settings still decode.
+    var inputGain: Float?
     var clockOffset: Double = 0
     var macInputDevice: String = ""
     var macOutputDevice: String = ""

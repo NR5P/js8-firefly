@@ -137,6 +137,7 @@ final class AppModel {
                 self.routeDescription = self.audio.routeDescription
                 self.usbConnected = self.audio.isUSBInterfaceConnected
                 self.inputGain = self.audio.inputGain
+                self.adaptPTTToInterface()
             }
         }
 
@@ -148,6 +149,7 @@ final class AppModel {
                 if reason == .newDeviceAvailable || reason == .oldDeviceUnavailable {
                     self.audio.restart()
                     self.banner = self.audio.isUSBInterfaceConnected ? "USB audio interface connected" : "Audio route changed"
+                    self.adaptPTTToInterface()
                 }
                 self.routeDescription = self.audio.routeDescription
                 self.usbConnected = self.audio.isUSBInterfaceConnected
@@ -183,6 +185,16 @@ final class AppModel {
     }
 
     // MARK: Settings
+
+    /// QMX/QDX carry TX audio over their own USB sound card and key on that audio
+    /// (their Digi VOX setting), so the Digirig keying tone would only corrupt the signal.
+    private func adaptPTTToInterface() {
+        guard let name = audio.usbInterfaceName?.uppercased(),
+              name.contains("QMX") || name.contains("QDX"),
+              settings.tx.pttMethod == .digirigTone else { return }
+        settings.tx.pttMethod = .vox
+        banner = "QMX/QDX detected: PTT set to VOX. Set Digi › VOX to ON on the radio."
+    }
 
     private func applyStationSettings() {
         station.config = settings.station

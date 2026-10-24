@@ -169,6 +169,15 @@ final class AudioIO: @unchecked Sendable {
         #endif
     }
 
+    /// Name of the connected USB audio interface, if any (e.g. "QMX Transceiver").
+    var usbInterfaceName: String? {
+        #if os(iOS)
+        return AVAudioSession.sharedInstance().currentRoute.inputs.first { $0.portType == .usbAudio }?.portName
+        #else
+        return [inputDeviceID, outputDeviceID].compactMap { $0 }.first { MacAudioDevices.isUSB($0) }.flatMap { MacAudioDevices.name(of: $0) }
+        #endif
+    }
+
     /// Current hardware input gain, or nil if this interface doesn't expose one.
     var inputGain: Float? {
         #if os(iOS)

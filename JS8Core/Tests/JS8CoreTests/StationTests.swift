@@ -180,6 +180,28 @@ final class StationTests: XCTestCase {
                       a.bandConversation.map(\.text).joined(separator: "\n"))
     }
 
+    /// Frames packed for one speed still decode after switching speeds: the
+    /// data-frame format is carried in the frame's type bits, not the speed.
+    func testSpeedChangeMidMessage() {
+        let text = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG 0123456789"
+        for (from, to) in [(JS8Submode.normal, JS8Submode.fast), (.turbo, .normal), (.normal, .slow)] {
+            for sentBefore in [0, 1] {
+                let a = makeStation("KN4CRD", "EM73")
+                let b = makeStation("J1Y", "PM95")
+                a.submode = from
+                b.submode = from
+                XCTAssertTrue(a.send(text))
+                run([a, b], periods: sentBefore, submode: from)
+                a.submode = to
+                b.submode = to
+                run([a, b], periods: 12, submode: to)
+                // A longer new period can trip the missed-frame marker; the text must still arrive whole.
+                let heard = conversationText(b).replacingOccurrences(of: b.config.mfi, with: "")
+                XCTAssertTrue(heard.contains(text),"\(from)->\(to) after \(sentBefore): " + conversationText(b))
+            }
+        }
+    }
+
     func testFastModes() {
         for mode in [JS8Submode.fast, .turbo, .slow, .ultra] {
             let a = makeStation("KN4CRD", "EM73")

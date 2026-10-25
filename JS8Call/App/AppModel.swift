@@ -85,6 +85,7 @@ final class AppModel {
     @ObservationIgnored private var catPTTOn = false
     @ObservationIgnored private var lastRefresh = Date.distantPast
     @ObservationIgnored private var started = false
+    @ObservationIgnored private var lastAudioRestart = Date.distantPast
 
     init() {
         var s = AppSettings.load()
@@ -151,7 +152,7 @@ final class AppModel {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 if reason == .newDeviceAvailable || reason == .oldDeviceUnavailable {
-                    self.audio.restart()
+                    self.restartAudio()
                     self.banner = self.audio.isUSBInterfaceConnected ? "USB audio interface connected" : "Audio route changed"
                     self.adaptPTTToInterface()
                 }
@@ -163,9 +164,28 @@ final class AppModel {
         NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] note in
             let type = (note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt).flatMap(AVAudioSession.InterruptionType.init)
             MainActor.assumeIsolated {
-                if type == .ended { self?.audio.restart() }
+                if type == .ended { self?.restartAudio() }
             }
         }
+        // The media server crashed and was relaunched: every audio object is invalid.
+        NotificationCenter.default.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.restartAudio() }
+        }
+        NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.audio.isStalled else { return }
+                self.restartAudio()
+            }
+        }
+        #endif
+        audio.onConfigurationChange = { [weak self] in
+            MainActor.assumeIsolated {
+                // Restarting can itself post a change; skip those (the watchdog covers the rest).
+                guard let self, Date().timeIntervalSince(self.lastAudioRestart) > 2 else { return }
+                self.restartAudio()
+            }
+        }
+        #if os(iOS)
         UIApplication.shared.isIdleTimerDisabled = true
         #endif
 
@@ -466,7 +486,23 @@ final class AppModel {
         banner = String(format: "Clock adjusted to %+.2f s", settings.clockOffset)
     }
 
+    /// Restart both audio engines and refresh what the UI shows about the route.
+    private func restartAudio() {
+        lastAudioRestart = Date()
+        audio.restart()
+        audioRunning = audio.inputRunning
+        routeDescription = audio.routeDescription
+        usbConnected = audio.isUSBInterfaceConnected
+        inputGain = audio.inputGain
+    }
+
     private func secondLoop() {
+        // Watchdog: iOS can stop the engines without a notification we act on;
+        // without this only relaunching the app brings receive and transmit back.
+        if audio.isStalled, Date().timeIntervalSince(lastAudioRestart) > 10 {
+            NSLog("JS8 audio stalled; restarting engines")
+            restartAudio()
+        }
         station.tick()
         markers.removeAll { Date().timeIntervalSince($0.date) > 45 }
         refresh()

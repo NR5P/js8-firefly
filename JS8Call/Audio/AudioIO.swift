@@ -106,6 +106,20 @@ final class AudioIO: @unchecked Sendable {
         set { outputLevelLock.withLock { $0 = newValue } }
     }
     var onError: ((String) -> Void)?
+    /// Called on the main queue when either engine stopped itself after a hardware
+    /// configuration change (e.g. the USB interface changing sample rate or channels).
+    /// The engines stay stopped until `restart()`.
+    var onConfigurationChange: (() -> Void)?
+    private var observingConfiguration = false
+
+    /// True when the input engine should be delivering audio but no samples have
+    /// arrived for a few seconds, or either engine has stopped on its own.
+    var isStalled: Bool {
+        guard inputRunning else { return false }
+        if !inputEngine.isRunning || (outputRunning && !outputEngine.isRunning) { return true }
+        let latest = ring.latestIndex
+        return latest < 0 || AppClock.nowSeconds() * Double(RxRingBuffer.rate) - Double(latest) > 3 * Double(RxRingBuffer.rate)
+    }
 
     #if os(macOS)
     var inputDeviceID: AudioDeviceID?
@@ -201,9 +215,21 @@ final class AudioIO: @unchecked Sendable {
     // MARK: Start / stop
 
     func start() {
+        observeConfigurationChanges()
         applyInputGain()
         startInput()
         startOutput()
+    }
+
+    private func observeConfigurationChanges() {
+        guard !observingConfiguration else { return }
+        observingConfiguration = true
+        for engine in [inputEngine, outputEngine] {
+            NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine,
+                                                   queue: .main) { [weak self] _ in
+                self?.onConfigurationChange?()
+            }
+        }
     }
 
     func stop() {

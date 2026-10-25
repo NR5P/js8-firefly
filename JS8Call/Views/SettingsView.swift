@@ -335,7 +335,7 @@ private struct JS8Section: View {
     var body: some View {
         Section {
             Picker("Speed", selection: $settings.submode) {
-                ForEach(JS8Submode.allCases) { m in Text("\(m.name) (\(m.period)s)").tag(m) }
+                ForEach(JS8Submode.allCases.sorted { $0.period > $1.period }) { m in Text("\(m.name) (\(m.period)s)").tag(m) }
             }
             Toggle("Decode all speeds", isOn: $settings.decodeAllSpeeds)
             Toggle("Auto-reply to queries", isOn: $settings.station.autoReply)

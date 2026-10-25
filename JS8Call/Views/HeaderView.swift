@@ -38,9 +38,11 @@ struct HeaderView: View {
                     VStack(alignment: .trailing, spacing: 1) {
                         HStack(spacing: 4) {
                             Circle().fill(rigColor).frame(width: 6, height: 6)
-                            Text(Band.name(for: model.settings.dialFrequency))
+                            Text([Band.name(for: model.settings.dialFrequency), model.settings.dialLabel]
+                                    .compactMap { $0 }.joined(separator: " · "))
                                 .font(Theme.rounded(11, .bold))
                                 .foregroundStyle(Theme.accent)
+                                .lineLimit(1)
                         }
                         Text(Format.mhzLong(model.settings.dialFrequency))
                             .font(Theme.mono(15, .semibold))
@@ -96,7 +98,7 @@ struct SpeedMenu: View {
 
     var body: some View {
         Menu {
-            ForEach(JS8Submode.allCases) { m in
+            ForEach(JS8Submode.allCases.sorted { $0.period > $1.period }) { m in
                 Button {
                     model.settings.submode = m
                 } label: {
@@ -173,10 +175,55 @@ struct BandPickerSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var custom = ""
+    @State private var customLabel = ""
+    @State private var editing: SavedFrequency?
+    @State private var editKHz = ""
+    @State private var editLabel = ""
 
     var body: some View {
         NavigationStack {
             List {
+                if !model.settings.customFrequencies.isEmpty {
+                    Section {
+                        ForEach(model.settings.customFrequencies) { saved in
+                            Button {
+                                model.setDial(saved.frequency)
+                                dismiss()
+                            } label: {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(saved.label.isEmpty ? Band.name(for: saved.frequency) : saved.label)
+                                            .font(Theme.rounded(16, .semibold))
+                                            .lineLimit(1)
+                                        Text(Format.mhzLong(saved.frequency) + " MHz · " + Band.name(for: saved.frequency))
+                                            .font(Theme.mono(13))
+                                            .foregroundStyle(Theme.dim)
+                                    }
+                                    Spacer()
+                                    if model.settings.dialFrequency == saved.frequency {
+                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.accent)
+                                    }
+                                }
+                            }
+                            .swipeActions {
+                                Button(role: .destructive) { model.deleteFrequency(saved.id) } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                Button { beginEdit(saved) } label: { Label("Edit", systemImage: "pencil") }
+                            }
+                            .contextMenu {
+                                Button { beginEdit(saved) } label: { Label("Edit", systemImage: "pencil") }
+                                Button(role: .destructive) { model.deleteFrequency(saved.id) } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("My frequencies")
+                    } footer: {
+                        Text("Swipe or long-press to edit or delete.")
+                    }
+                }
                 Section {
                     ForEach(Band.js8) { band in
                         Button {
@@ -199,26 +246,68 @@ struct BandPickerSheet: View {
                     Text(model.rig.isConnected ? "The radio will be tuned automatically." :
                         "No rig control connected — set the radio to this dial frequency in USB / DATA-U.")
                 }
-                Section("Custom dial (kHz)") {
+                Section {
+                    TextField("kHz, e.g. " + String(format: "%.3f", Double(model.settings.dialFrequency) / 1000), text: $custom)
+                        .font(Theme.mono(15))
+                        #if os(iOS)
+                        .keyboardType(.decimalPad)
+                        #endif
+                    TextField("Label (optional), e.g. Local Net", text: $customLabel)
                     HStack {
-                        TextField("e.g. 7078.000", text: $custom)
-                            .font(Theme.mono(15))
-                            #if os(iOS)
-                            .keyboardType(.decimalPad)
-                            #endif
-                        Button("Set") {
-                            if let khz = Double(custom.replacingOccurrences(of: ",", with: ".")), khz > 100 {
-                                model.setDial(UInt64((khz * 1000).rounded()))
+                        Button("Tune") {
+                            if let hz = Self.parseKHz(custom) {
+                                model.setDial(hz)
                                 dismiss()
                             }
                         }
+                        .disabled(Self.parseKHz(custom) == nil)
+                        Spacer()
+                        Button("Save") {
+                            let hz = custom.isEmpty ? model.settings.dialFrequency : Self.parseKHz(custom)
+                            guard let hz else { return }
+                            model.saveFrequency(hz, label: customLabel)
+                            model.setDial(hz)
+                            custom = ""
+                            customLabel = ""
+                        }
+                        .disabled(!custom.isEmpty && Self.parseKHz(custom) == nil)
                     }
+                    .buttonStyle(.borderless)
+                } header: {
+                    Text("Custom dial")
+                } footer: {
+                    Text("Save adds it to My frequencies. Leave the frequency empty to save the current dial.")
                 }
             }
             .navigationTitle("Band")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
+            .alert("Edit frequency", isPresented: Binding(get: { editing != nil }, set: { if !$0 { editing = nil } })) {
+                TextField("kHz", text: $editKHz)
+                    #if os(iOS)
+                    .keyboardType(.decimalPad)
+                    #endif
+                TextField("Label", text: $editLabel)
+                Button("Save") {
+                    if let saved = editing, let hz = Self.parseKHz(editKHz) {
+                        model.saveFrequency(hz, label: editLabel, replacing: saved.id)
+                    }
+                    editing = nil
+                }
+                Button("Cancel", role: .cancel) { editing = nil }
+            }
         }
+    }
+
+    private func beginEdit(_ saved: SavedFrequency) {
+        editKHz = String(format: "%.3f", Double(saved.frequency) / 1000)
+        editLabel = saved.label
+        editing = saved
+    }
+
+    static func parseKHz(_ text: String) -> UInt64? {
+        guard let khz = Double(text.replacingOccurrences(of: ",", with: ".")), khz > 100 else { return nil }
+        return UInt64((khz * 1000).rounded())
     }
 }

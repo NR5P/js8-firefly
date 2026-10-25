@@ -25,12 +25,25 @@ struct AppSettings: Codable, Equatable {
     var waterfallBrightness: Float = 0
     var notificationsEnabled = true
     var hasOnboarded = false
+    /// User-saved dial frequencies with optional labels; nil until the first is saved.
+    /// Optional so older saved settings still decode.
+    var savedFrequencies: [SavedFrequency]?
 
     static let storageKey = "JS8CallSettings.v1"
 
     /// Wide enough that a signal 40 dB over the noise doesn't saturate to white.
     static let defaultWaterfallRange: Float = 48
     var waterfallRangeDB: Float { waterfallRange ?? Self.defaultWaterfallRange }
+
+    var customFrequencies: [SavedFrequency] {
+        get { savedFrequencies ?? [] }
+        set { savedFrequencies = newValue.isEmpty ? nil : newValue.sorted { $0.frequency < $1.frequency } }
+    }
+
+    /// The label of the saved frequency matching the dial, if any.
+    var dialLabel: String? {
+        customFrequencies.first { $0.frequency == dialFrequency && !$0.label.isEmpty }?.label
+    }
 
     static func load() -> AppSettings {
         guard let data = UserDefaults.standard.data(forKey: storageKey),
@@ -45,6 +58,12 @@ struct AppSettings: Codable, Equatable {
     }
 }
 
+/// A user-saved dial frequency, e.g. a local net or event frequency.
+struct SavedFrequency: Codable, Identifiable, Hashable {
+    var id = UUID()
+    var frequency: UInt64
+    var label: String
+}
 
 /// Standard JS8 calling frequencies (dial, USB).
 struct Band: Identifiable, Hashable {

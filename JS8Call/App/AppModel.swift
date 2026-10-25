@@ -87,7 +87,9 @@ final class AppModel {
     @ObservationIgnored private var started = false
 
     init() {
-        let s = AppSettings.load()
+        var s = AppSettings.load()
+        // Every launch starts on Normal, the speed most stations are listening on.
+        s.submode = .normal
         settings = s
         AppClock.offset = s.clockOffset
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -280,6 +282,18 @@ final class AppModel {
 
     func setDial(_ hz: UInt64) {
         settings.dialFrequency = hz
+    }
+
+    /// Save a dial frequency under a label, replacing any entry already on it.
+    func saveFrequency(_ hz: UInt64, label: String, replacing id: UUID? = nil) {
+        let label = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        var list = settings.customFrequencies.filter { $0.id != id && $0.frequency != hz }
+        list.append(SavedFrequency(id: id ?? UUID(), frequency: hz, label: label))
+        settings.customFrequencies = list
+    }
+
+    func deleteFrequency(_ id: UUID) {
+        settings.customFrequencies.removeAll { $0.id == id }
     }
 
     // MARK: Transmit

@@ -42,6 +42,7 @@ private struct StationSection: View {
                 TextField("EM73tu", text: $settings.station.grid)
                     .multilineTextAlignment(.trailing)
                     .font(Theme.mono(15))
+                    .foregroundStyle(settings.autoGrid ? Theme.dim : Theme.text)
                     .disabled(settings.autoGrid)
             }
             if !settings.station.grid.isEmpty && !GridMath.isValid(settings.station.grid) {

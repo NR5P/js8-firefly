@@ -16,6 +16,12 @@ final class GridLocator: NSObject, CLLocationManagerDelegate {
 
     @ObservationIgnored private let manager = CLLocationManager()
 
+    #if os(macOS)
+    private static let deniedMessage = "Location access is off. Turn it on for JS8 Firefly in System Settings › Privacy & Security › Location Services."
+    #else
+    private static let deniedMessage = "Location access is off. Turn it on in Settings › Apps › JS8 Firefly › Location."
+    #endif
+
     override init() {
         super.init()
         manager.delegate = self
@@ -51,7 +57,7 @@ final class GridLocator: NSObject, CLLocationManagerDelegate {
             manager.requestWhenInUseAuthorization()
             return false
         case .denied, .restricted:
-            fail("Location access is off. Allow it for JS8 Firefly in Settings › Privacy › Location Services.")
+            fail(Self.deniedMessage)
             return false
         default:
             return true
@@ -86,7 +92,7 @@ final class GridLocator: NSObject, CLLocationManagerDelegate {
             // Transient: Core Location keeps trying.
             if (error as? CLError)?.code == .locationUnknown, isTracking { return }
             if (error as? CLError)?.code == .denied {
-                fail("Location access is off. Allow it for JS8 Firefly in Settings › Privacy › Location Services.")
+                fail(Self.deniedMessage)
             } else {
                 fail("Couldn't get a location fix. Try again, or enter your grid manually.")
             }

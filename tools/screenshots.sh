@@ -63,6 +63,8 @@ for devs in json.load(sys.stdin)['devices'].values():
       sleep 1.5
     done
     xcrun simctl io "$udid" screenshot "$OUT/$name/$file.png" >/dev/null 2>&1
+    # App Store Connect wants screenshots without an alpha channel.
+    python3 -c 'import sys; from PIL import Image; Image.open(sys.argv[1]).convert("RGB").save(sys.argv[1])' "$OUT/$name/$file.png"
     echo "[$name] $file.png"
   done
   xcrun simctl spawn "$udid" notifyutil -p com.js8firefly.demo.close

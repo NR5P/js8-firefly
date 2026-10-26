@@ -3,7 +3,7 @@
 # (JS8Call/App/DemoAir.swift): scripted stations are modulated into the real
 # decoder, so the waterfall, band activity, chat and inbox all fill for real.
 #
-#   tools/screenshots.sh            # iPhone 6.9" and iPad 13"
+#   tools/screenshots.sh            # iPhone 6.3" and iPad 13"
 #   tools/screenshots.sh iphone     # just one device
 #   WARMUP=150 tools/screenshots.sh # seconds of band traffic before capturing
 #
@@ -24,7 +24,7 @@ APP="$DD/Build/Products/Debug-iphonesimulator/JS8 Firefly.app"
 
 # name|device type|shots (commands:file, in order; "+" joins commands)
 DEVICES=(
-  "iphone|com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max|tab0:01-live tab1:02-chat tab2:03-stations tab3:04-inbox tab0+bands:05-my-frequencies tab0+levels:06-levels"
+  "iphone|com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro|tab0:01-live tab1:02-chat tab2:03-stations tab3:04-inbox tab0+bands:05-my-frequencies tab0+levels:06-levels"
   "ipad|com.apple.CoreSimulator.SimDeviceType.iPad-Pro-13-inch-M5-12GB|close:01-console bands:02-my-frequencies levels:03-levels"
 )
 

@@ -40,8 +40,7 @@ public final class Inbox: @unchecked Sendable {
     }
 
     private func save() {
-        guard let url else { return }
-        if let data = try? JSONEncoder().encode(messages) {
+        if let url, let data = try? JSONEncoder().encode(messages) {
             try? data.write(to: url, options: .atomic)
         }
         onChange?()

@@ -31,6 +31,8 @@ Ultra.
     network (Hamlib `rigctld`, flrig, or a raw serial-over-TCP bridge).
 - Background receive, notifications for directed messages, clock-offset sync
   from received signals.
+- **Grid square from GPS**: set it with one tap, or turn on automatic updates
+  so it follows you as you move. Manual entry still works.
 
 ## Project layout
 

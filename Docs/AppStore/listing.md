@@ -41,6 +41,7 @@ Character limits are Apple's; counts are for the text below.
 > • Live waterfall with every decode labeled on it; tap a signal to tune to it
 > • Band activity, with directed messages to you highlighted
 > • Stations heard, with grid, distance, bearing and signal report
+> • Set your grid square from GPS with one tap, or keep it updated as you move
 >
 > FULL JS8 MESSAGING
 > • Directed queries: SNR?, GRID?, INFO?, STATUS?, HEARING?, QUERY MSGS and more

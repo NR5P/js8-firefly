@@ -25,6 +25,7 @@ PERMISSIONS
 - Bluetooth: optional, connects to a Bluetooth LE serial (CAT) adapter that tunes the radio.
 - Local network: optional, controls the radio through a rigctld or flrig server on the user's own network.
 - Notifications: local alerts when a message is addressed to the user.
+- Location (when in use): optional, sets the operator's Maidenhead grid square from the device location, once on a button tap or continuously if the user turns that on. The location never leaves the device; only the grid square the user chooses to transmit goes out over the air.
 
 BACKGROUND AUDIO
 The app declares the "audio" background mode because operators leave it running in the background to keep receiving and decoding the radio, like a scanner. While in the background it keeps capturing audio from the radio interface, decoding JS8 messages, and sending automatic replies the user has turned on (standard JS8 behavior). It posts a local notification when a message arrives for the user. The "bluetooth-central" mode keeps the Bluetooth CAT connection to the radio alive during this time.

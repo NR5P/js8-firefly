@@ -4,8 +4,7 @@ Fill these in under App Store Connect → Distribution → iOS App 1.0 → App R
 
 - **Sign-in required:** No
 - **Contact:** Nathan Rigg · nathan@nr5p.com · (your phone number)
-- **Attachment:** a short screen recording of a real on-air contact (iPhone + Digirig or QMX + radio).
-  Recommended, since reviewers won't have radio hardware.
+- **Attachment:** none for now. The notes offer a video of a real on-air contact if App Review asks.
 
 ## Notes (paste into the Notes box, 4000 characters max)
 
@@ -16,7 +15,7 @@ HOW TO REVIEW WITHOUT A RADIO
 1. Launch the app. On the welcome screen tap "Just listen for now" (or enter any callsign such as N0CALL and grid EM12).
 2. Allow microphone access. Without a radio interface, the built-in microphone is used as the receive input.
 3. The Live tab shows a scrolling waterfall of the received audio and the band activity list. The ring at the top left counts down each 15-second transmit period.
-4. To see decoding, play JS8 signals near the device: for example the attached video, or any JS8 recording. Decoded messages appear on the waterfall, in Band Activity, in the Chat tab, and in the Stations tab.
+4. To see decoding, play a JS8 recording (there are many online) near the device. Decoded messages appear on the waterfall, in Band Activity, in the Chat tab, and in the Stations tab. We are happy to provide a video of the app making a real on-air contact on request.
 5. The band picker (tap the frequency at the top right) shows standard JS8 calling frequencies. "My frequencies" lets users save their own labeled frequencies.
 
 Transmitting (CQ, HB and the message box) needs a licensed operator and a radio connected through an audio interface. Without one, a transmission only plays audio tones from the speaker.

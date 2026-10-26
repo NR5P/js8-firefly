@@ -73,6 +73,11 @@ struct HeaderView: View {
             }
             .id(ctx.date.timeIntervalSince1970 > 0)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .demoCommand)) { note in
+            let cmd = note.object as? String
+            showBands = cmd == "bands"
+            showLevels = cmd == "levels"
+        }
         .sheet(isPresented: $showBands) {
             BandPickerSheet()
                 .presentationDetents([.medium, .large])

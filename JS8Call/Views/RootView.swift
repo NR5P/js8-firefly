@@ -61,6 +61,9 @@ struct PhoneLayout: View {
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
                 .tag(4)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .demoCommand)) { note in
+            if let cmd = note.object as? String, cmd.hasPrefix("tab"), let t = Int(cmd.dropFirst(3)) { tab = t }
+        }
     }
 }
 

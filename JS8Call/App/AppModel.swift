@@ -86,17 +86,37 @@ final class AppModel {
     @ObservationIgnored private var lastRefresh = Date.distantPast
     @ObservationIgnored private var started = false
     @ObservationIgnored private var lastAudioRestart = Date.distantPast
+    #if DEBUG
+    @ObservationIgnored private var demo: DemoAir?
+    #endif
+
+    /// True when scripted demo stations stand in for the radio (screenshots).
+    private var isDemo: Bool {
+        #if DEBUG
+        return demo != nil
+        #else
+        return false
+        #endif
+    }
 
     init() {
         var s = AppSettings.load()
         // Every launch starts on Normal, the speed most stations are listening on.
         s.submode = .normal
+        #if DEBUG
+        if DemoAir.isEnabled { DemoAir.configure(&s) }
+        #endif
         settings = s
         AppClock.offset = s.clockOffset
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("JS8Call", isDirectory: true)
         try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
-        station = JS8Station(config: s.station, inbox: Inbox(url: support.appendingPathComponent("inbox.json")),
+        var inboxURL: URL? = support.appendingPathComponent("inbox.json")
+        #if DEBUG
+        // Each demo run starts with an empty inbox.
+        if DemoAir.isEnabled { inboxURL = nil }
+        #endif
+        station = JS8Station(config: s.station, inbox: Inbox(url: inboxURL),
                              clock: { AppClock.now() })
         applyStationSettings()
         station.onNotify = { [weak self] kind, text in self?.notify(kind, text) }
@@ -117,6 +137,16 @@ final class AppModel {
     func start() {
         guard !started else { return }
         started = true
+        #if DEBUG
+        if DemoAir.isEnabled {
+            audio.spectrum.onRow = { [weak self] row in self?.waterfall.add(row: row) }
+            demo = DemoAir(ring: audio.ring, spectrum: audio.spectrum) { [weak self] level in self?.inputLevel = level }
+            demo?.start()
+            audioRunning = true
+            startTimers()
+            return
+        }
+        #endif
         audio.onError = { [weak self] msg in DispatchQueue.main.async { self?.lastError = msg } }
         audio.onInputLevel = { [weak self] l, peak in
             DispatchQueue.main.async {
@@ -192,7 +222,10 @@ final class AppModel {
         if settings.hasOnboarded { requestNotificationPermission() }
 
         rig.configure(settings.rig)
+        startTimers()
+    }
 
+    private func startTimers() {
         timers.append(Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.txLoop() }
         })
@@ -397,7 +430,7 @@ final class AppModel {
     private func txLoop() {
         let now = AppClock.now()
         if !isTuning, let req = station.pollTransmit(now: now) {
-            audio.transmit(req, settings: settings.tx)
+            if !isDemo { audio.transmit(req, settings: settings.tx) }
             txText = req.displayText
             refresh(force: true)
         }
@@ -432,7 +465,7 @@ final class AppModel {
             guard now >= readyAt, lastDecodedPeriod[mode] != periodStart else { continue }
             lastDecodedPeriod[mode] = periodStart
             if !station.shouldDecode(now: AppClock.now()) { continue }
-            if let s = station.lastTxStart?.timeIntervalSince1970, s >= periodStart - 1, s <= readyAt { continue }
+            if !isDemo, let s = station.lastTxStart?.timeIntervalSince1970, s >= periodStart - 1, s <= readyAt { continue }
             if decodesInFlight > 4 { continue }
             let samples = audio.ring.read(start: Int64(periodStart * 12000), count: mode.samplesNeeded)
             let nfqso = settings.offset

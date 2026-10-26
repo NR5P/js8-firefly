@@ -25,6 +25,7 @@ struct SettingsView: View {
 }
 
 private struct StationSection: View {
+    @Environment(AppModel.self) private var model
     @Binding var settings: AppSettings
     @State private var groupText = ""
 
@@ -41,9 +42,31 @@ private struct StationSection: View {
                 TextField("EM73tu", text: $settings.station.grid)
                     .multilineTextAlignment(.trailing)
                     .font(Theme.mono(15))
+                    .disabled(settings.autoGrid)
             }
             if !settings.station.grid.isEmpty && !GridMath.isValid(settings.station.grid) {
                 Text("Enter a 4 or 6 character Maidenhead locator").font(.caption).foregroundStyle(Theme.warn)
+            }
+            Toggle("Update grid from GPS", isOn: $settings.autoGrid)
+            if settings.autoGrid {
+                Text("Your grid follows the device location. Turn this off to enter it manually.")
+                    .font(.caption).foregroundStyle(Theme.dim)
+            } else {
+                Button {
+                    model.locator.locateOnce()
+                } label: {
+                    HStack {
+                        Label("Set grid from current location", systemImage: "location.fill")
+                        if model.locator.isLocating {
+                            Spacer()
+                            ProgressView().controlSize(.small)
+                        }
+                    }
+                }
+                .disabled(model.locator.isLocating)
+            }
+            if let error = model.locator.lastError {
+                Text(error).font(.caption).foregroundStyle(Theme.warn)
             }
             LabeledContent("Info") {
                 TextField("Station info (sent on INFO?)", text: $settings.station.info)

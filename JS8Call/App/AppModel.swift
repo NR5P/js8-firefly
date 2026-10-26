@@ -30,6 +30,7 @@ final class AppModel {
     let station: JS8Station
     let audio = AudioIO()
     let rig = RigController()
+    let locator = GridLocator()
     @ObservationIgnored private let waterfall = WaterfallRenderer()
 
     // UI snapshots
@@ -130,6 +131,10 @@ final class AppModel {
         }
         waterfall.rangeDB = s.waterfallRangeDB
         waterfall.brightness = s.waterfallBrightness
+        locator.onGrid = { [weak self] grid in
+            guard let self, self.settings.station.grid != grid else { return }
+            self.settings.station.grid = grid
+        }
     }
 
     // MARK: Lifecycle
@@ -222,6 +227,7 @@ final class AppModel {
         if settings.hasOnboarded { requestNotificationPermission() }
 
         rig.configure(settings.rig)
+        if settings.autoGrid && !isDemo { locator.startTracking() }
         startTimers()
     }
 
@@ -277,6 +283,9 @@ final class AppModel {
         waterfall.rangeDB = settings.waterfallRangeDB
         waterfall.brightness = settings.waterfallBrightness
         if settings.rig != old.rig { rig.configure(settings.rig) }
+        if settings.autoGrid != old.autoGrid, started {
+            if settings.autoGrid { locator.startTracking() } else { locator.stopTracking() }
+        }
         if settings.dialFrequency != old.dialFrequency, rig.isConnected, rig.frequency != settings.dialFrequency {
             rig.setFrequency(settings.dialFrequency)
         }

@@ -202,6 +202,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Bluetooth is used to talk to a Bluetooth LE CAT adapter on your radio.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "The local network is used to control your radio through rigctld, flrig or a network CAT bridge.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used only to work out your Maidenhead grid square. It never leaves the device except as the grid you transmit.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Audio input from your radio interface (e.g. Digirig) is decoded to receive JS8 signals.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -243,6 +244,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Bluetooth is used to talk to a Bluetooth LE CAT adapter on your radio.";
 				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "The local network is used to control your radio through rigctld, flrig or a network CAT bridge.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used only to work out your Maidenhead grid square. It never leaves the device except as the grid you transmit.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Audio input from your radio interface (e.g. Digirig) is decoded to receive JS8 signals.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

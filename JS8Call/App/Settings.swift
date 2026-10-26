@@ -28,12 +28,20 @@ struct AppSettings: Codable, Equatable {
     /// User-saved dial frequencies with optional labels; nil until the first is saved.
     /// Optional so older saved settings still decode.
     var savedFrequencies: [SavedFrequency]?
+    /// Keep the grid updated from the device location; nil (off) until the user turns it on.
+    /// Optional so older saved settings still decode.
+    var gridFromLocation: Bool?
 
     static let storageKey = "JS8CallSettings.v1"
 
     /// Wide enough that a signal 40 dB over the noise doesn't saturate to white.
     static let defaultWaterfallRange: Float = 48
     var waterfallRangeDB: Float { waterfallRange ?? Self.defaultWaterfallRange }
+
+    var autoGrid: Bool {
+        get { gridFromLocation ?? false }
+        set { gridFromLocation = newValue ? true : nil }
+    }
 
     var customFrequencies: [SavedFrequency] {
         get { savedFrequencies ?? [] }
@@ -132,6 +140,22 @@ enum GridMath {
         let u = Array(g.uppercased().utf8)
         guard u.count >= 4 else { return false }
         return (65...82).contains(u[0]) && (65...82).contains(u[1]) && (48...57).contains(u[2]) && (48...57).contains(u[3])
+    }
+
+    /// The 6-character locator (e.g. "EM73tu") for a position in degrees, east and north positive.
+    static func grid(latitude: Double, longitude: Double) -> String {
+        let lon = min(max(longitude + 180, 0), 359.9999)
+        let lat = min(max(latitude + 90, 0), 179.9999)
+        let field = { (v: Double) in UInt8(65 + Int(v)) }
+        let sub = { (v: Double) in UInt8(97 + Int(v)) }
+        let bytes: [UInt8] = [
+            field(lon / 20), field(lat / 10),
+            UInt8(48 + Int(lon.truncatingRemainder(dividingBy: 20) / 2)),
+            UInt8(48 + Int(lat.truncatingRemainder(dividingBy: 10))),
+            sub(lon.truncatingRemainder(dividingBy: 2) * 12),
+            sub(lat.truncatingRemainder(dividingBy: 1) * 24),
+        ]
+        return String(decoding: bytes, as: UTF8.self)
     }
 
     static func distanceBearing(from a: String, to b: String) -> (km: Double, bearing: Double)? {

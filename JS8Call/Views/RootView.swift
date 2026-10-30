@@ -116,8 +116,10 @@ struct ChatTab: View {
 /// conversation and heard stations side by side.
 struct DesktopLayout: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var showSettings = false
     @State private var showInbox = false
+    @State private var height: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -146,26 +148,23 @@ struct DesktopLayout: View {
             .fixedSize(horizontal: false, vertical: true)
 
             WaterfallView()
-                .frame(height: 210)
+                .frame(height: isShort ? 150 : 210)
                 .padding(10)
                 .dismissesKeyboardOnTap()
 
-            HStack(alignment: .top, spacing: 10) {
-                Card { BandActivityView() }
-                    .frame(minWidth: 280, idealWidth: 360)
-                    .dismissesKeyboardOnTap()
-                VStack(spacing: 8) {
-                    Card(padding: 4) { ChatPane().padding(.top, 6) }
-                        .dismissesKeyboardOnTap()
-                    ComposeBar()
+            GeometryReader { geo in
+                Group {
+                    if geo.size.width < Self.threeColumnWidth && verticalSizeClass != .compact {
+                        twoColumns(width: geo.size.width)
+                    } else {
+                        threeColumns
+                    }
                 }
-                .frame(minWidth: 380)
-                Card { StationsView() }
-                    .frame(minWidth: 250, idealWidth: 300)
-                    .dismissesKeyboardOnTap()
+                .frame(width: geo.size.width, height: geo.size.height)
             }
             .padding([.horizontal, .bottom], 10)
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
         .sheet(isPresented: $showSettings) {
             NavigationStack {
                 SettingsView()
@@ -180,6 +179,51 @@ struct DesktopLayout: View {
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showInbox = false } } }
             }
             .frame(minWidth: 520, minHeight: 480)
+        }
+    }
+
+    /// Narrowest row the three columns' minimum widths fit in.
+    private static let threeColumnWidth: CGFloat = 930
+
+    /// Shorter than any full-screen iPad, like the unfolded iPhone Duo in
+    /// landscape. iPhones in landscape (compact height) keep the full waterfall.
+    private var isShort: Bool {
+        verticalSizeClass != .compact && height > 0 && height < 700
+    }
+
+    private var threeColumns: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Card { BandActivityView() }
+                .frame(minWidth: 280, idealWidth: 360)
+                .dismissesKeyboardOnTap()
+            conversation
+                .frame(minWidth: 380)
+            Card { StationsView() }
+                .frame(minWidth: 250, idealWidth: 300)
+                .dismissesKeyboardOnTap()
+        }
+    }
+
+    /// Regular-width screens too narrow for three columns, like the unfolded
+    /// iPhone Duo: band activity and stations share the left column. iPhones
+    /// never get here, since in landscape their vertical size class is compact.
+    private func twoColumns(width: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(spacing: 10) {
+                Card { BandActivityView() }
+                Card { StationsView() }
+            }
+            .frame(width: (width - 10) * 0.45)
+            .dismissesKeyboardOnTap()
+            conversation
+        }
+    }
+
+    private var conversation: some View {
+        VStack(spacing: 8) {
+            Card(padding: 4) { ChatPane().padding(.top, 6) }
+                .dismissesKeyboardOnTap()
+            ComposeBar()
         }
     }
 }

@@ -90,6 +90,9 @@ final class AudioIO: @unchecked Sendable {
     private var renderOutputLevel: Float = 0.5   // render-thread copy
     private(set) var inputRunning = false
     private(set) var outputRunning = false
+    /// Set once input has run; from then on the watchdog keeps retrying while it can't
+    /// (e.g. session inactive in the background). Never set if input never worked (no permission or device).
+    private var wantsAudio = false
 
     /// Input channel: 0 = left, 1 = right, -1 = mix.
     var inputChannel = 0
@@ -115,8 +118,8 @@ final class AudioIO: @unchecked Sendable {
     /// True when the input engine should be delivering audio but no samples have
     /// arrived for a few seconds, or either engine has stopped on its own.
     var isStalled: Bool {
-        guard inputRunning else { return false }
-        if !inputEngine.isRunning || (outputRunning && !outputEngine.isRunning) { return true }
+        guard wantsAudio else { return false }
+        if !inputRunning || !inputEngine.isRunning || (outputRunning && !outputEngine.isRunning) { return true }
         let latest = ring.latestIndex
         return latest < 0 || AppClock.nowSeconds() * Double(RxRingBuffer.rate) - Double(latest) > 3 * Double(RxRingBuffer.rate)
     }
@@ -128,7 +131,9 @@ final class AudioIO: @unchecked Sendable {
 
     // MARK: Session (iOS)
 
-    func configureSession() {
+    /// Returns false when the session couldn't be set up or activated, in which case the engines must not be started.
+    @discardableResult
+    func configureSession() -> Bool {
         #if os(iOS)
         let session = AVAudioSession.sharedInstance()
         do {
@@ -145,8 +150,10 @@ final class AudioIO: @unchecked Sendable {
             }
         } catch {
             onError?("Audio session: \(error.localizedDescription)")
+            return false
         }
         #endif
+        return true
     }
 
     static func requestRecordPermission(_ done: @escaping (Bool) -> Void) {
@@ -242,7 +249,12 @@ final class AudioIO: @unchecked Sendable {
 
     func restart() {
         stop()
-        configureSession()
+        // In the background iOS may refuse to activate the session; leave the engines
+        // stopped and let the watchdog retry rather than tapping a dead input.
+        guard configureSession() else {
+            NSLog("JS8 audio session unavailable; engines left stopped")
+            return
+        }
         start()
     }
 
@@ -253,8 +265,14 @@ final class AudioIO: @unchecked Sendable {
             do { try input.auAudioUnit.setDeviceID(id) } catch { onError?("Input device: \(error.localizedDescription)") }
         }
         #endif
+        // installTap raises an uncatchable exception when the tap format doesn't match the
+        // hardware, which happens if the route or session changed under a stopped engine.
         let hwFormat = input.outputFormat(forBus: 0)
-        guard hwFormat.sampleRate > 0, hwFormat.channelCount > 0 else {
+        let deviceFormat = input.inputFormat(forBus: 0)
+        guard hwFormat.sampleRate > 0, hwFormat.channelCount > 0,
+              hwFormat.sampleRate == deviceFormat.sampleRate,
+              hwFormat.channelCount == deviceFormat.channelCount else {
+            NSLog("JS8 audio input not started: tap %@, device %@", hwFormat, deviceFormat)
             onError?("No audio input available")
             return
         }
@@ -271,6 +289,7 @@ final class AudioIO: @unchecked Sendable {
             inputEngine.prepare()
             try inputEngine.start()
             inputRunning = true
+            wantsAudio = true
         } catch {
             onError?("Input start: \(error.localizedDescription)")
         }

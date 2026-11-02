@@ -267,8 +267,14 @@ final class AudioIO: @unchecked Sendable {
         #endif
         // installTap raises an uncatchable exception when the tap format doesn't match the
         // hardware, which happens if the route or session changed under a stopped engine.
-        let hwFormat = input.outputFormat(forBus: 0)
+        var hwFormat = input.outputFormat(forBus: 0)
         let deviceFormat = input.inputFormat(forBus: 0)
+        #if os(macOS)
+        // After setDeviceID the node's output keeps the previous device's channel count
+        // (1 ch from the built-in mic vs 2 ch from a radio's USB codec); the tap accepts
+        // the device's own format, which also keeps both channels selectable.
+        if deviceFormat.sampleRate == hwFormat.sampleRate { hwFormat = deviceFormat }
+        #endif
         guard hwFormat.sampleRate > 0, hwFormat.channelCount > 0,
               hwFormat.sampleRate == deviceFormat.sampleRate,
               hwFormat.channelCount == deviceFormat.channelCount else {

@@ -239,6 +239,10 @@ private struct RigSection: View {
                 Picker("Radio", selection: Binding(get: { settings.rig.preset }, set: { settings.rig.apply($0) })) {
                     ForEach(RigPreset.allCases) { Text($0.title).tag($0) }
                 }
+                if settings.rig.preset == .truSDX {
+                    Text("The (tr)uSDX USB port is serial only, not a sound card like the QMX. Connect its audio jacks through an interface such as a Digirig Lite with Digirig's uSDX cable. Not fully tested yet: check keying into a dummy load first.")
+                        .font(.caption).foregroundStyle(Theme.dim)
+                }
                 Picker("CAT protocol", selection: $settings.rig.catProtocol) {
                     ForEach(CATProtocol.allCases) { Text($0.title).tag($0) }
                 }

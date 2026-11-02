@@ -74,6 +74,10 @@ cmake -S tools/refharness -B tools/refharness/build && cmake --build tools/refha
   PTT tone* in Settings › Audio & PTT. Set TX level so the radio's ALC barely
   moves.
 - **QMX/QDX** direct over USB audio: use *VOX* PTT.
+- **(tr)uSDX**: its USB port is serial only (no USB audio), so audio needs an
+  interface such as a Digirig Lite with Digirig's uSDX cable. Not fully tested
+  yet; check keying into a dummy load first. On a Mac, CAT PTT over the radio's
+  USB port avoids relying on the tone.
 - **FTDX3000**: audio through a Digirig on the rear DATA jack; CAT over its USB
   port (Mac) or a BLE/network bridge (iPhone).
 

@@ -64,6 +64,7 @@ Character limits are Apple's; counts are for the text below.
 > WHAT YOU NEED
 > • An amateur radio license to transmit. Anyone can listen.
 > • An HF radio and an audio interface such as a Digirig Lite, or a radio with built-in USB audio such as the QRP Labs QMX
+> • (tr)uSDX owners: the radio's USB port carries no audio, so plugging it straight in will not work. Use an audio interface such as a Digirig Lite with Digirig's uSDX cable. This setup has not been fully tested yet, so before going on the air, check into a dummy load that it keys, sounds clean and returns to receive.
 > • A setup guide for the QMX and Digirig Lite is at nr5p.com/js8-firefly.html
 
 **Keywords (100)**

@@ -81,6 +81,10 @@ struct HeaderView: View {
         .sheet(isPresented: $showBands) {
             BandPickerSheet()
                 .presentationDetents([.medium, .large])
+                #if os(macOS)
+                // macOS ignores detents and sizes the sheet to the List, which collapses.
+                .frame(minWidth: 460, minHeight: 620)
+                #endif
         }
         .sheet(isPresented: $showLevels) {
             LevelsSheet()

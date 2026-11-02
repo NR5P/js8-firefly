@@ -177,6 +177,8 @@ final class RigController {
     private var pollTimer: Timer?
     private var lastSetTime = Date.distantPast
     private var pendingRigctldReplies: [(String) -> Void] = []
+    /// Waiting on the Icom mode read so data mode keeps the rig's current filter.
+    private var icomDataModePending = false
 
     var isConnected: Bool { status == .connected }
     var supportsPTT: Bool { settings.connection != .none }
@@ -192,6 +194,7 @@ final class RigController {
     func connect() {
         rxBuffer.removeAll()
         pendingRigctldReplies.removeAll()
+        icomDataModePending = false
         let t: ByteTransport?
         switch settings.connection {
         case .none:
@@ -310,7 +313,8 @@ final class RigController {
 
     private func setDataMode() {
         switch settings.connection {
-        case .rigctld: rigctld("M PKTUSB 0") { _ in }
+        // Passband -1 leaves the rig's filter alone; 0 would reset it to Hamlib's default.
+        case .rigctld: rigctld("M PKTUSB -1") { _ in }
         case .flrig: break
         default:
             switch settings.catProtocol {
@@ -319,8 +323,9 @@ final class RigController {
                 // USB; QMX/QDX/Elecraft treat USB with audio as digital.
                 send("MD2;")
             case .icom:
-                sendCIV([0x06, 0x01, 0x01])          // USB, filter 1
-                sendCIV([0x1A, 0x06, 0x01, 0x01])    // data mode on (newer rigs)
+                // Both mode commands carry a filter byte; read the current one first.
+                icomDataModePending = true
+                sendCIV([0x04])
             }
         }
     }
@@ -410,6 +415,13 @@ final class RigController {
                     let cmd = f[4]
                     if (cmd == 0x03 || cmd == 0x00) && f.count >= 11 {
                         gotFrequency(Self.fromBCD(f[5..<10]))
+                    }
+                    // FE FE E0 <rig> 04 mode filter FD
+                    if cmd == 0x04 && f.count >= 8 && icomDataModePending {
+                        icomDataModePending = false
+                        let filter = f[6]
+                        sendCIV([0x06, 0x01, filter])          // USB, current filter
+                        sendCIV([0x1A, 0x06, 0x01, filter])    // data mode on (newer rigs)
                     }
                 }
             }

@@ -86,6 +86,9 @@ final class AppModel {
     @ObservationIgnored private var catPTTOn = false
     @ObservationIgnored private var lastRefresh = Date.distantPast
     @ObservationIgnored private var started = false
+    /// Band chat lines already checked against the watch list, and when each term last notified.
+    @ObservationIgnored private var watchSeenLines: Set<UUID> = []
+    @ObservationIgnored private var watchLastAlert: [String: Date] = [:]
     @ObservationIgnored private var lastAudioRestart = Date.distantPast
     #if DEBUG
     @ObservationIgnored private var demo: DemoAir?
@@ -564,6 +567,7 @@ final class AppModel {
         calls = station.callActivity.values.sorted { $0.utc > $1.utc }
         conversation = station.conversation
         bandConversation = station.bandConversation
+        checkWatchList()
         pendingReplies = station.pendingReplies
         queuedFrames = station.txFramesRemaining
         heartbeatLoop = station.heartbeatLoopActive
@@ -602,19 +606,47 @@ final class AppModel {
     private func notify(_ kind: StationNotification, _ text: String) {
         switch kind {
         case .directed, .inbox:
-            #if os(iOS)
-            let background = UIApplication.shared.applicationState != .active
-            #else
-            let background = true
-            #endif
-            guard settings.notificationsEnabled, background else { return }
-            let content = UNMutableNotificationContent()
-            content.title = kind == .inbox ? "New JS8 message" : "JS8 directed message"
-            content.body = text
-            content.sound = .default
-            UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+            postNotification(title: kind == .inbox ? "New JS8 message" : "JS8 directed message", body: text)
         default:
             break
         }
+    }
+
+    /// At most one notification per watch term in this long, so a busy net doesn't flood the lock screen.
+    private static let watchAlertInterval: TimeInterval = 600
+
+    /// Notifies (in the background) when a new band chat line matches the watch list.
+    /// Lines addressed to us are left to the directed-message notification.
+    private func checkWatchList() {
+        let mycall = settings.station.callsign
+        for line in bandConversation where !line.isTx && !watchSeenLines.contains(line.id) {
+            guard let item = settings.watch(matching: line.text) else { continue }
+            watchSeenLines.insert(line.id)
+            if !mycall.isEmpty && line.text.contains(" \(mycall)") { continue }
+            guard settings.watchNotify else { continue }
+            let now = Date()
+            if let last = watchLastAlert[item.term], now.timeIntervalSince(last) < Self.watchAlertInterval { continue }
+            if postNotification(title: "Heard \(item.term)", body: line.text) { watchLastAlert[item.term] = now }
+        }
+        if watchSeenLines.count > bandConversation.count {
+            watchSeenLines.formIntersection(bandConversation.map(\.id))
+        }
+    }
+
+    /// Posts a local notification if they're on and the app isn't in front.
+    @discardableResult
+    private func postNotification(title: String, body: String) -> Bool {
+        #if os(iOS)
+        let background = UIApplication.shared.applicationState != .active
+        #else
+        let background = true
+        #endif
+        guard settings.notificationsEnabled, background else { return false }
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+        return true
     }
 }

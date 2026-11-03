@@ -24,7 +24,8 @@ struct ConversationView: View {
                                        subtitle: "Messages on your offset and anything directed to you show up here.")
                     }
                     ForEach(lines) { line in
-                        MessageBubble(line: line, eot: model.settings.station.eot, mycall: model.settings.station.callsign)
+                        MessageBubble(line: line, eot: model.settings.station.eot, mycall: model.settings.station.callsign,
+                                      watch: model.settings.watch(matching: line.text))
                             .id(line.id)
                     }
                 }
@@ -66,7 +67,8 @@ struct BandConversationView: View {
                     ForEach(lines) { line in
                         let onMyOffset = abs(line.offset - model.settings.offset) <= (line.submode ?? model.settings.submode).rxThreshold
                         MessageBubble(line: line, eot: model.settings.station.eot, mycall: model.settings.station.callsign,
-                                      showSignal: true, onMyOffset: onMyOffset)
+                                      showSignal: true, onMyOffset: onMyOffset,
+                                      watch: model.settings.watch(matching: line.text))
                             .id(line.id)
                             .contentShape(Rectangle())
                             .onTapGesture { if !line.isTx { join(line) } }
@@ -189,9 +191,11 @@ struct MessageBubble: View {
     let mycall: String
     var showSignal = false
     var onMyOffset = false
+    var watch: WatchItem?
 
     var body: some View {
         let toMe = !line.isTx && !mycall.isEmpty && line.text.contains(" \(mycall)")
+        let watch = line.isTx ? nil : watch
         HStack {
             if line.isTx { Spacer(minLength: 40) }
             VStack(alignment: line.isTx ? .trailing : .leading, spacing: 3) {
@@ -207,6 +211,7 @@ struct MessageBubble: View {
                     }
                     if line.isTx { Image(systemName: "antenna.radiowaves.left.and.right") }
                     if showSignal && onMyOffset && !line.isTx { Image(systemName: "ear").foregroundStyle(Theme.warn) }
+                    if let watch { WatchTag(item: watch) }
                 }
                 .font(Theme.mono(9))
                 .foregroundStyle(Theme.faint)
@@ -226,6 +231,7 @@ struct MessageBubble: View {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .stroke(toMe ? Theme.tx.opacity(0.7) : .clear, lineWidth: 1)
                     )
+                    .watchGlow(watch, since: line.date, cornerRadius: 16, fill: !toMe)
                     .opacity(line.isComplete || line.isTx ? 1 : 0.9)
             }
             if !line.isTx { Spacer(minLength: 40) }

@@ -82,6 +82,8 @@ final class DemoAir {
             Cue(period: 5, call: "KD5QRV", to: Self.mycall, text: "TNX FER THE REPORT. 73"),
             Cue(period: 6, call: "VE3NXR", to: "", text: "HB"),
             Cue(period: 7, call: "G4ZTW", to: "", text: "HB"),
+            Cue(period: 8, call: "N0VBQ", to: "@ARES", text: "NET TONIGHT 0100Z ON 3578 KHZ"),
+            Cue(period: 9, call: "K4LMB", to: "", text: "HB"),
         ]
     }
 
@@ -215,6 +217,7 @@ final class DemoAir {
             SavedFrequency(frequency: 3_578_000, label: "Texas ARES"),
             SavedFrequency(frequency: 14_080_000, label: "Sked with K4LMB"),
         ]
+        s.watchList = [WatchItem(term: "K4LMB", color: .gold), WatchItem(term: "ARES", color: .magenta)]
     }
 }
 #endif

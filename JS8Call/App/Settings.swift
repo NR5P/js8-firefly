@@ -31,6 +31,11 @@ struct AppSettings: Codable, Equatable {
     /// Keep the grid updated from the device location; nil (off) until the user turns it on.
     /// Optional so older saved settings still decode.
     var gridFromLocation: Bool?
+    /// Callsigns, @GROUPs and words to make stand out; nil until the first is added.
+    /// Optional so older saved settings still decode.
+    var watchItems: [WatchItem]?
+    /// Notify when watched traffic is heard in the background; nil means on.
+    var watchNotifications: Bool?
 
     static let storageKey = "JS8CallSettings.v1"
 
@@ -46,6 +51,22 @@ struct AppSettings: Codable, Equatable {
     var customFrequencies: [SavedFrequency] {
         get { savedFrequencies ?? [] }
         set { savedFrequencies = newValue.isEmpty ? nil : newValue.sorted { $0.frequency < $1.frequency } }
+    }
+
+    var watchList: [WatchItem] {
+        get { watchItems ?? [] }
+        set { watchItems = newValue.isEmpty ? nil : newValue }
+    }
+
+    var watchNotify: Bool {
+        get { watchNotifications ?? true }
+        set { watchNotifications = newValue ? nil : false }
+    }
+
+    /// The first watch item found in a line of decoded text.
+    func watch(matching text: String) -> WatchItem? {
+        let list = watchList
+        return WatchMatcher.firstMatch(in: text, terms: list.map(\.term)).map { list[$0] }
     }
 
     /// The label of the saved frequency matching the dial, if any.
@@ -71,6 +92,24 @@ struct SavedFrequency: Codable, Identifiable, Hashable {
     var id = UUID()
     var frequency: UInt64
     var label: String
+}
+
+/// A callsign, @GROUP or word to make stand out when it is heard (JS8Call's highlight words).
+struct WatchItem: Codable, Identifiable, Hashable {
+    var id = UUID()
+    /// Normalized with `WatchMatcher.normalize`.
+    var term: String
+    var color: WatchColor = .gold
+
+    var kind: String {
+        if term.hasPrefix("@") { return "Group" }
+        return Varicode.isValidCallsign(term).valid ? "Station" : "Word or group"
+    }
+}
+
+enum WatchColor: String, Codable, CaseIterable, Identifiable {
+    case gold, magenta, violet, lime, orange, pearl
+    var id: String { rawValue }
 }
 
 /// Standard JS8 calling frequencies (dial, USB).

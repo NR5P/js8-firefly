@@ -11,6 +11,7 @@ struct SettingsView: View {
         @Bindable var model = model
         Form {
             StationSection(settings: $model.settings)
+            WatchSection(settings: $model.settings)
             AudioSection(settings: $model.settings)
             RigSection(settings: $model.settings)
             JS8Section(settings: $model.settings)
@@ -117,6 +118,93 @@ private struct StationSection: View {
         } header: {
             Label("Station", systemImage: "person.crop.circle")
         }
+    }
+}
+
+/// JS8Call's highlight words: stations, groups and words that stand out when heard.
+private struct WatchSection: View {
+    @Binding var settings: AppSettings
+    @State private var term = ""
+    @State private var color: WatchColor = .gold
+
+    var body: some View {
+        Section {
+            HStack {
+                TextField("K4LMB, @ARES or a word", text: Binding(get: { term }, set: { term = $0.uppercased() }))
+                    .font(Theme.mono(15))
+                    .uppercaseInput()
+                    .onSubmit(add)
+                Button("Add", action: add)
+                    .disabled(WatchMatcher.normalize(term) == nil)
+            }
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+            ColorSwatches(selection: $color)
+            ForEach(settings.watchList) { item in
+                HStack(spacing: 10) {
+                    Menu {
+                        Picker("Color", selection: binding(for: item)) {
+                            ForEach(WatchColor.allCases) { c in Text(c.name).tag(c) }
+                        }
+                    } label: {
+                        Circle().fill(item.color.color)
+                            .frame(width: 16, height: 16)
+                            .shadow(color: item.color.color.opacity(0.7), radius: 4)
+                    }
+                    .buttonStyle(.borderless)
+                    Text(item.term).font(Theme.mono(14, .bold)).foregroundStyle(item.color.color)
+                    Spacer()
+                    Text(item.kind).font(.caption).foregroundStyle(Theme.dim)
+                    Button(role: .destructive) {
+                        settings.watchList.removeAll { $0.id == item.id }
+                    } label: { Image(systemName: "minus.circle") }
+                    .buttonStyle(.borderless)
+                }
+            }
+            .onMove { settings.watchList.move(fromOffsets: $0, toOffset: $1) }
+            Toggle("Notify when heard in the background", isOn: $settings.watchNotify)
+        } header: {
+            Label("Watch List", systemImage: "eye")
+        } footer: {
+            Text("Traffic from these stations, to these groups or containing these words glows in its color in Band Activity, Chat and Stations. A word like ARES also matches @ARES. If more than one matches, the higher one in the list wins.")
+        }
+    }
+
+    private func add() {
+        guard let t = WatchMatcher.normalize(term) else { return }
+        if let i = settings.watchList.firstIndex(where: { $0.term == t }) {
+            settings.watchList[i].color = color
+        } else {
+            settings.watchList.append(WatchItem(term: t, color: color))
+        }
+        term = ""
+    }
+
+    private func binding(for item: WatchItem) -> Binding<WatchColor> {
+        Binding(get: { item.color }, set: { c in
+            if let i = settings.watchList.firstIndex(where: { $0.id == item.id }) { settings.watchList[i].color = c }
+        })
+    }
+}
+
+private struct ColorSwatches: View {
+    @Binding var selection: WatchColor
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(WatchColor.allCases) { c in
+                Button { selection = c } label: {
+                    Circle().fill(c.color)
+                        .frame(width: 26, height: 26)
+                        .shadow(color: c.color.opacity(selection == c ? 0.8 : 0), radius: 6)
+                        .overlay(Circle().stroke(Theme.text, lineWidth: selection == c ? 2 : 0).padding(-4))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(c.name)
+                .accessibilityAddTraits(selection == c ? .isSelected : [])
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 

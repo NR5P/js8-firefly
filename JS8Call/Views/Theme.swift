@@ -101,3 +101,78 @@ extension View {
         shadow(color: color.opacity(0.55), radius: radius)
     }
 }
+
+extension WatchColor {
+    var color: Color {
+        switch self {
+        case .gold: return Color(red: 1.0, green: 0.82, blue: 0.22)
+        case .magenta: return Color(red: 1.0, green: 0.36, blue: 0.84)
+        case .violet: return Color(red: 0.68, green: 0.52, blue: 1.0)
+        case .lime: return Color(red: 0.72, green: 1.0, blue: 0.32)
+        case .orange: return Color(red: 1.0, green: 0.56, blue: 0.18)
+        case .pearl: return Color(red: 0.94, green: 0.95, blue: 1.0)
+        }
+    }
+
+    var name: String { rawValue.capitalized }
+}
+
+/// Watched traffic: a glowing outline that breathes for a while after the
+/// traffic is heard, with a small nudge on arrival, then settles to a steady
+/// glow. Reduce Motion keeps just the steady glow.
+struct WatchGlow: ViewModifier {
+    let color: Color?
+    let since: Date
+    var cornerRadius: CGFloat = 10
+    var fill = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    static let pulseSeconds: TimeInterval = 45
+    private static let breathSeconds: TimeInterval = 1.8
+    private static let nudgeSeconds: TimeInterval = 0.6
+
+    func body(content: Content) -> some View {
+        if let color {
+            let age = AppClock.now().timeIntervalSince(since)
+            let live = !reduceMotion && age > -1 && age < Self.pulseSeconds
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !live)) { _ in
+                let (glow, nudge) = live ? Self.envelope(AppClock.now().timeIntervalSince(since)) : (0, 0)
+                let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                content
+                    .background(shape.fill(color.opacity(fill ? 0.12 + 0.08 * glow : 0)))
+                    .overlay(shape.stroke(color.opacity(0.7 + 0.3 * glow), lineWidth: 1.2 + 0.6 * glow))
+                    .shadow(color: color.opacity(0.3 + 0.4 * glow), radius: 3 + 9 * glow)
+                    .offset(x: 2.5 * nudge)
+            }
+        } else {
+            content
+        }
+    }
+
+    /// Glow 0...1 breathing and fading out over `pulseSeconds`, and a damped side-to-side nudge.
+    private static func envelope(_ age: TimeInterval) -> (Double, Double) {
+        guard age >= 0 else { return (0, 0) }
+        let fade = pow(max(0, 1 - age / pulseSeconds), 1.5)
+        let breath = 0.5 - 0.5 * cos(2 * .pi * age / breathSeconds)
+        let nudge = age < nudgeSeconds ? sin(2 * .pi * age * 5) * (1 - age / nudgeSeconds) : 0
+        return (breath * fade, nudge)
+    }
+}
+
+extension View {
+    func watchGlow(_ item: WatchItem?, since: Date, cornerRadius: CGFloat = 10, fill: Bool = true) -> some View {
+        modifier(WatchGlow(color: item?.color.color, since: since, cornerRadius: cornerRadius, fill: fill))
+    }
+}
+
+/// The watch term that made a line stand out.
+struct WatchTag: View {
+    let item: WatchItem
+
+    var body: some View {
+        Label(item.term, systemImage: "eye.fill")
+            .font(Theme.mono(9, .bold))
+            .foregroundStyle(item.color.color)
+            .labelStyle(.titleAndIcon)
+    }
+}

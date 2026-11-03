@@ -19,7 +19,8 @@ struct BandActivityView: View {
                 ScrollView {
                     LazyVStack(spacing: 6) {
                         ForEach(model.bandRows) { row in
-                            BandRow(row: row, selected: abs(row.offset - model.settings.offset) <= row.submode.rxThreshold)
+                            BandRow(row: row, selected: abs(row.offset - model.settings.offset) <= row.submode.rxThreshold,
+                                    watch: model.settings.watch(matching: row.text))
                                 .onTapGesture { model.setOffset(row.offset) }
                                 .contextMenu {
                                     Button("Move to \(row.offset) Hz") { model.setOffset(row.offset) }
@@ -39,6 +40,7 @@ struct BandActivityView: View {
 struct BandRow: View {
     let row: BandActivityRow
     let selected: Bool
+    var watch: WatchItem?
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -67,6 +69,7 @@ struct BandRow: View {
                     Text(JS8Station.since(row.utc, now: AppClock.now()))
                     Text(row.submode.name)
                     Text(String(format: "%+.1fs", row.tdrift))
+                    if let watch { WatchTag(item: watch) }
                 }
                 .font(Theme.mono(9))
                 .foregroundStyle(Theme.faint)
@@ -78,6 +81,7 @@ struct BandRow: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(row.isDirectedToMe ? Theme.tx.opacity(0.12) : (selected ? Theme.warn.opacity(0.08) : Theme.cardHi.opacity(0.55)))
         )
+        .watchGlow(watch, since: row.utc, fill: !row.isDirectedToMe)
     }
 }
 
@@ -99,7 +103,8 @@ struct StationsView: View {
                     LazyVStack(spacing: 6) {
                         ForEach(model.calls.filter { filter.isEmpty || $0.call.contains(filter.uppercased()) }) { cd in
                             StationRow(cd: cd, myGrid: model.settings.station.grid,
-                                       selected: model.selectedCallsign == cd.call)
+                                       selected: model.selectedCallsign == cd.call,
+                                       watch: model.settings.watch(matching: cd.call))
                                 .onTapGesture {
                                     model.selectedCallsign = model.selectedCallsign == cd.call ? "" : cd.call
                                     if model.selectedCallsign == cd.call { onSelect?() }
@@ -123,6 +128,7 @@ struct StationRow: View {
     let cd: CallDetail
     let myGrid: String
     let selected: Bool
+    var watch: WatchItem?
 
     var body: some View {
         HStack(spacing: 10) {
@@ -140,6 +146,7 @@ struct StationRow: View {
                     if cd.cqTimestamp != nil { Chip(text: "CQ", color: Theme.rx) }
                     if cd.ackTimestamp != nil { Chip(text: "ACK", color: Theme.accent2) }
                     if !cd.through.isEmpty { Chip(text: "via \(cd.through)", color: Theme.faint) }
+                    if let watch { Image(systemName: "eye.fill").font(.caption2).foregroundStyle(watch.color.color) }
                 }
                 HStack(spacing: 8) {
                     if !cd.grid.isEmpty { Text(cd.grid.trimmingCharacters(in: .whitespaces)) }
@@ -167,6 +174,7 @@ struct StationRow: View {
             .fill(selected ? Theme.accent.opacity(0.12) : Theme.cardHi.opacity(0.55)))
         .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
             .stroke(selected ? Theme.accent.opacity(0.6) : .clear, lineWidth: 1))
+        .watchGlow(watch, since: cd.utc, cornerRadius: 12, fill: !selected)
     }
 }
 

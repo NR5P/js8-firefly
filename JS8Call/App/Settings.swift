@@ -108,7 +108,7 @@ struct WatchItem: Codable, Identifiable, Hashable {
 }
 
 enum WatchColor: String, Codable, CaseIterable, Identifiable {
-    case gold, magenta, violet, lime, orange, pearl
+    case gold, magenta, violet, lime, orange, crimson, pearl
     var id: String { rawValue }
 }
 

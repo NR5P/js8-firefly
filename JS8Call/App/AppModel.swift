@@ -147,6 +147,7 @@ final class AppModel {
             audio.spectrum.onRow = { [weak self] row in self?.waterfall.add(row: row) }
             demo = DemoAir(ring: audio.ring, spectrum: audio.spectrum) { [weak self] level in self?.inputLevel = level }
             demo?.start()
+            requestNotificationPermission()
             audioRunning = true
             startTimers()
             return

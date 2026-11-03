@@ -1,6 +1,9 @@
 import Foundation
 #if DEBUG
 import JS8Core
+#if os(iOS)
+import UIKit
+#endif
 
 /// Screenshot demo: scripted stations "on the air" whose frames are modulated,
 /// mixed with noise and written into the receive ring and waterfall in real
@@ -9,7 +12,9 @@ import JS8Core
 /// Launch with `-demo YES` (Debug builds only). While it runs, the Darwin
 /// notifications `com.js8firefly.demo.<command>` drive the UI for capture:
 /// `tab0`…`tab4` pick the iPhone tab, `bands`/`levels` open a header sheet and
-/// `close` dismisses it (see tools/screenshots.sh).
+/// `close` dismisses it (see tools/screenshots.sh). On iOS the demo keeps running
+/// for a short while after the app is backgrounded, so directed messages raise
+/// real notifications for recordings.
 @MainActor
 final class DemoAir {
     static var isEnabled: Bool { UserDefaults.standard.bool(forKey: "demo") }
@@ -43,6 +48,9 @@ final class DemoAir {
     private var firstPeriod = 0
     private var lastPeriod = -1
     private var timer: Timer?
+    #if os(iOS)
+    private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+    #endif
 
     nonisolated static let commandPrefix = "com.js8firefly.demo."
     static let mycall = "NR5P"
@@ -102,7 +110,32 @@ final class DemoAir {
             MainActor.assumeIsolated { self?.pump() }
         }
         RunLoop.main.add(timer!, forMode: .common)
+        #if os(iOS)
+        NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil,
+                                               queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.beginBackgroundTask() }
+        }
+        NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil,
+                                               queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.endBackgroundTask() }
+        }
+        #endif
     }
+
+    #if os(iOS)
+    private func beginBackgroundTask() {
+        endBackgroundTask()
+        backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "DemoAir") { [weak self] in
+            MainActor.assumeIsolated { self?.endBackgroundTask() }
+        }
+    }
+
+    private func endBackgroundTask() {
+        guard backgroundTask != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(backgroundTask)
+        backgroundTask = .invalid
+    }
+    #endif
 
     private func pump() {
         let rate = Double(RxRingBuffer.rate)

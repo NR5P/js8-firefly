@@ -94,24 +94,6 @@ struct SavedFrequency: Codable, Identifiable, Hashable {
     var label: String
 }
 
-/// A callsign, @GROUP or word to make stand out when it is heard (JS8Call's highlight words).
-struct WatchItem: Codable, Identifiable, Hashable {
-    var id = UUID()
-    /// Normalized with `WatchMatcher.normalize`.
-    var term: String
-    var color: WatchColor = .gold
-
-    var kind: String {
-        if term.hasPrefix("@") { return "Group" }
-        return Varicode.isValidCallsign(term).valid ? "Station" : "Word or group"
-    }
-}
-
-enum WatchColor: String, Codable, CaseIterable, Identifiable {
-    case gold, magenta, violet, lime, orange, crimson, pearl
-    var id: String { rawValue }
-}
-
 /// Standard JS8 calling frequencies (dial, USB).
 struct Band: Identifiable, Hashable {
     let name: String

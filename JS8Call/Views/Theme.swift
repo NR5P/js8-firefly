@@ -104,18 +104,9 @@ extension View {
 
 extension WatchColor {
     var color: Color {
-        switch self {
-        case .gold: return Color(red: 1.0, green: 0.82, blue: 0.22)
-        case .magenta: return Color(red: 1.0, green: 0.36, blue: 0.84)
-        case .violet: return Color(red: 0.68, green: 0.52, blue: 1.0)
-        case .lime: return Color(red: 0.72, green: 1.0, blue: 0.32)
-        case .orange: return Color(red: 1.0, green: 0.56, blue: 0.18)
-        case .crimson: return Color(red: 0.82, green: 0.04, blue: 0.20)
-        case .pearl: return Color(red: 0.94, green: 0.95, blue: 1.0)
-        }
+        let c = rgb
+        return Color(red: c.red, green: c.green, blue: c.blue)
     }
-
-    var name: String { rawValue.capitalized }
 }
 
 /// Watched traffic: a glowing outline that breathes for a while after the

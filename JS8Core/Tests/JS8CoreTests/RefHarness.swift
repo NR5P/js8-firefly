@@ -1,3 +1,5 @@
+// Runs the desktop C++ reference harness through Process, which only exists on macOS.
+#if os(macOS)
 import Foundation
 
 /// Drives the C++ reference harness (tools/refharness) built from the original
@@ -63,3 +65,4 @@ final class RefHarness {
         return lines
     }
 }
+#endif

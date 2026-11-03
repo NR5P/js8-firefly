@@ -1,3 +1,5 @@
+// Runs the desktop C++ reference harness through Process, which only exists on macOS.
+#if os(macOS)
 import XCTest
 @testable import JS8Core
 
@@ -147,9 +149,4 @@ final class DecoderComparisonTests: XCTestCase {
         XCTAssertEqual(Set(refLines.map(\.frame)), Set(lines.map(\.frame)))
     }
 }
-
-func gaussian(_ g: inout SeededGenerator) -> Float {
-    let u1 = max(Double(g.next() >> 11) / Double(1 << 53), 1e-12)
-    let u2 = Double(g.next() >> 11) / Double(1 << 53)
-    return Float((-2 * log(u1)).squareRoot() * cos(2 * Double.pi * u2))
-}
+#endif

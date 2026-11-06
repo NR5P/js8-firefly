@@ -24,6 +24,16 @@ Character limits are Apple's; counts are for the text below.
 - Privacy Policy URL: https://nr5p.com/js8-firefly-privacy.html
 - Data collection: **"No, we do not collect data from this app"**
 
+## Version 1.0.2
+
+**What's New (4000)**
+
+> Refreshed App Store screenshots and a small text update in Settings. No changes to receiving, transmitting or rig control.
+
+Description, promotional text and keywords: unchanged from 1.0.1.
+
+**Build:** 1.0.2 (8)
+
 ## Version 1.0.1
 
 **What's New (4000)**

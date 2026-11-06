@@ -16,7 +16,7 @@ Character limits are Apple's; counts are for the text below.
 
 ## Pricing and Availability
 
-- Price: Free (USD 0.00)
+- Price: USD 4.99
 - Availability: all countries and regions
 
 ## App Privacy

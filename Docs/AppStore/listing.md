@@ -24,6 +24,18 @@ Character limits are Apple's; counts are for the text below.
 - Privacy Policy URL: https://nr5p.com/js8-firefly-privacy.html
 - Data collection: **"No, we do not collect data from this app"**
 
+## Version 1.0.1
+
+**What's New (4000)**
+
+> New: Watch List. In Settings > Watch List, add the callsigns, @GROUPs (like @ARES) and words you care about, and give each one its own color. Whenever they show up in Band Activity, Chat or Stations they glow, so you can spot a friend, your net or a keyword at a glance, and the app can alert you while it runs in the background.
+>
+> There are seven colors to choose from, including crimson for urgent words like EMERGENCY.
+
+Description, promotional text and keywords: paste them from the 1.0 section below. The description now has the (tr)uSDX note and a watch list bullet, neither of which is in App Store Connect yet.
+
+**Build:** 1.0.1 (7)
+
 ## Version 1.0
 
 **Promotional text (170)**
@@ -40,6 +52,7 @@ Character limits are Apple's; counts are for the text below.
 > • Decodes all five speeds at once
 > • Live waterfall with every decode labeled on it; tap a signal to tune to it
 > • Band activity, with directed messages to you highlighted
+> • Watch list: pick callsigns, @GROUPs and words, each in its own color, and they glow wherever they appear, with an optional alert in the background
 > • Stations heard, with grid, distance, bearing and signal report
 > • Set your grid square from GPS with one tap, or keep it updated as you move
 >

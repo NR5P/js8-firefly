@@ -46,7 +46,7 @@ Description, promotional text and keywords: paste them from the 1.0 section belo
 
 > JS8 Firefly is a JS8 client for amateur radio operators. Connect your iPhone or iPad to your HF radio and you can chat keyboard-to-keyboard, send heartbeats and leave store-and-forward messages with JS8 stations around the world, all from your pocket.
 >
-> It uses the same modem, error correction and message protocol as JS8Call, so it works with any JS8Call station on all five speeds: Slow, Normal, Fast, Turbo and Ultra.
+> Its JS8 modem is written from scratch in Swift and checked against JS8Call's original code, so it works with any JS8Call station on all five speeds: Slow, Normal, Fast, Turbo and Ultra.
 >
 > RECEIVE AND DECODE
 > • Decodes all five speeds at once
@@ -65,8 +65,8 @@ Description, promotional text and keywords: paste them from the 1.0 section belo
 >
 > MADE FOR PORTABLE OPERATING
 > • Digirig Lite over USB-C, with PTT keyed by a tone on the right audio channel
-> • QRP Labs QMX and QDX plug straight in, and PTT switches to VOX for you
-> • Rig control over Bluetooth LE or your network (Hamlib rigctld, flrig or a serial bridge), with presets for QRP Labs, Yaesu, Kenwood, Elecraft, Icom and Xiegu radios
+> • QRP Labs QMX and QDX plug straight in for audio, and PTT switches to VOX for you
+> • Rig control over your network through Hamlib rigctld or flrig, so the app can set the radio's frequency
 > • Save your own frequencies with labels, like your local net or a sked
 > • Keeps receiving in the background and notifies you when a message is for you
 > • Levels panel for setting receive and transmit audio, with a Tune button
@@ -77,6 +77,7 @@ Description, promotional text and keywords: paste them from the 1.0 section belo
 > WHAT YOU NEED
 > • An amateur radio license to transmit. Anyone can listen.
 > • An HF radio and an audio interface such as a Digirig Lite, or a radio with built-in USB audio such as the QRP Labs QMX
+> • No rig control (CAT) over USB: iOS doesn't let apps open a USB serial port, so a USB cable carries audio but can't change the radio's frequency. Set the frequency on the radio, or run Hamlib rigctld or flrig on a computer on your network.
 > • (tr)uSDX owners: the radio's USB port carries no audio, so plugging it straight in will not work. Use an audio interface such as a Digirig Lite with Digirig's uSDX cable. This setup has not been fully tested yet, so before going on the air, check into a dummy load that it keys, sounds clean and returns to receive.
 > • A setup guide for the QMX and Digirig Lite is at nr5p.com/js8-firefly.html
 

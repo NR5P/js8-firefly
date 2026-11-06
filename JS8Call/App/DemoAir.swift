@@ -62,28 +62,28 @@ final class DemoAir {
         self.ring = ring
         self.spectrum = spectrum
         self.onLevel = onLevel
-        add("W7GTK", "DM43", offset: 1650, amplitude: 260)
-        add("KD5QRV", "EM20", offset: 1210, amplitude: 400)
-        add("VE3NXR", "FN03", offset: 760, amplitude: 110)
-        add("K4LMB", "EM73", offset: 1500, amplitude: 180)
-        add("N0VBQ", "EN34", offset: 1950, amplitude: 90)
-        add("G4ZTW", "IO91", offset: 890, amplitude: 70)
-        add("KJ7ABP", "DN17", offset: 2350, amplitude: 150)
+        add("Q7GTK", "DM43", offset: 1650, amplitude: 260)
+        add("Q5QRV", "EM20", offset: 1210, amplitude: 400)
+        add("Q3NXR", "FN03", offset: 760, amplitude: 110)
+        add("Q4LMB", "EM73", offset: 1500, amplitude: 180)
+        add("Q0VBQ", "EN34", offset: 1950, amplitude: 90)
+        add("Q9ZTW", "IO91", offset: 890, amplitude: 70)
+        add("Q7ABP", "DN17", offset: 2350, amplitude: 150)
 
         cues = [
-            Cue(period: 0, call: "W7GTK", to: "", text: "CQ"),
-            Cue(period: 0, call: "VE3NXR", to: "", text: "HB"),
-            Cue(period: 0, call: "G4ZTW", to: "", text: "HB"),
-            Cue(period: 1, call: "KD5QRV", to: Self.mycall, text: "SNR?"),
-            Cue(period: 1, call: "N0VBQ", to: "W7GTK", text: "TNX CQ. UR -08 IN MINNESOTA. NAME DAVE"),
-            Cue(period: 2, call: "K4LMB", to: Self.mycall, text: "GM NATHAN. GOOD SIGS INTO GEORGIA ON 40M. QMX AT 5W HERE"),
-            Cue(period: 3, call: "KJ7ABP", to: Self.mycall, text: "MSG SEE YOU ON THE SUNDAY NET. 73"),
-            Cue(period: 4, call: "W7GTK", to: "N0VBQ", text: "TNX DAVE, UR -12 HERE. 73"),
-            Cue(period: 5, call: "KD5QRV", to: Self.mycall, text: "TNX FER THE REPORT. 73"),
-            Cue(period: 6, call: "VE3NXR", to: "", text: "HB"),
-            Cue(period: 7, call: "G4ZTW", to: "", text: "HB"),
-            Cue(period: 8, call: "N0VBQ", to: "@ARES", text: "NET TONIGHT 0100Z ON 3578 KHZ"),
-            Cue(period: 9, call: "K4LMB", to: "", text: "HB"),
+            Cue(period: 0, call: "Q7GTK", to: "", text: "CQ"),
+            Cue(period: 0, call: "Q3NXR", to: "", text: "HB"),
+            Cue(period: 0, call: "Q9ZTW", to: "", text: "HB"),
+            Cue(period: 1, call: "Q5QRV", to: Self.mycall, text: "SNR?"),
+            Cue(period: 1, call: "Q0VBQ", to: "Q7GTK", text: "TNX CQ. UR -08 IN MINNESOTA. NAME SAM"),
+            Cue(period: 2, call: "Q4LMB", to: Self.mycall, text: "GM ALEX. GOOD SIGS INTO GEORGIA ON 40M. QMX AT 5W HERE"),
+            Cue(period: 3, call: "Q7ABP", to: Self.mycall, text: "MSG SEE YOU ON THE SUNDAY NET. 73"),
+            Cue(period: 4, call: "Q7GTK", to: "Q0VBQ", text: "TNX SAM, UR -12 HERE. 73"),
+            Cue(period: 5, call: "Q5QRV", to: Self.mycall, text: "TNX FER THE REPORT. 73"),
+            Cue(period: 6, call: "Q3NXR", to: "", text: "HB"),
+            Cue(period: 7, call: "Q9ZTW", to: "", text: "HB"),
+            Cue(period: 8, call: "Q0VBQ", to: "@ARES", text: "NET TONIGHT 0100Z ON 3578 KHZ"),
+            Cue(period: 9, call: "Q4LMB", to: "", text: "HB"),
         ]
     }
 
@@ -215,9 +215,9 @@ final class DemoAir {
         s.customFrequencies = [
             SavedFrequency(frequency: 7_078_000, label: "Sunday net"),
             SavedFrequency(frequency: 3_578_000, label: "Texas ARES"),
-            SavedFrequency(frequency: 14_080_000, label: "Sked with K4LMB"),
+            SavedFrequency(frequency: 14_080_000, label: "Sked with Q4LMB"),
         ]
-        s.watchList = [WatchItem(term: "K4LMB", color: .gold), WatchItem(term: "ARES", color: .magenta)]
+        s.watchList = [WatchItem(term: "Q4LMB", color: .gold), WatchItem(term: "ARES", color: .magenta)]
     }
 }
 #endif

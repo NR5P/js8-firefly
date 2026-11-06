@@ -130,7 +130,7 @@ private struct WatchSection: View {
     var body: some View {
         Section {
             HStack {
-                TextField("K4LMB, @ARES or a word", text: Binding(get: { term }, set: { term = $0.uppercased() }))
+                TextField("NR5P, @ARES or a word", text: Binding(get: { term }, set: { term = $0.uppercased() }))
                     .font(Theme.mono(15))
                     .uppercaseInput()
                     .onSubmit(add)

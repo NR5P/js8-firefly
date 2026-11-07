@@ -241,60 +241,66 @@ struct MessageBubble: View {
 }
 
 /// Directed command shortcuts, as in JS8Call's query menu.
+///
+/// Kept short enough to fit on an iPhone without scrolling: the menu is rebuilt
+/// whenever a decode arrives, and a rebuild throws a scrolled menu back to its
+/// start, so anything below the fold was effectively unreachable on a busy band.
 struct QueryCommandMenu: View {
     @Environment(AppModel.self) private var model
     @Binding var text: String
 
-    private let commands: [(String, String, Bool)] = [
-        ("SNR?", "What is my signal report?", true),
-        ("GRID?", "What is your grid?", true),
-        ("INFO?", "What is your station info?", true),
-        ("STATUS?", "What is your status?", true),
-        ("HEARING?", "Who are you hearing?", true),
-        ("QUERY MSGS", "Do you have messages for me?", true),
-        ("AGN?", "Please repeat", true),
-        ("HW CPY?", "How do you copy?", true),
-        ("QSL?", "Did you copy?", true),
-        ("ACK", "Acknowledge", true),
-        ("NACK", "Negative acknowledge", true),
-        ("RR", "Roger roger", true),
-        ("QSL", "I copy", true),
-        ("FB", "Fine business", true),
-        ("YES", "Yes", true),
-        ("NO", "No", true),
-        ("73", "Best regards", true),
-        ("SK", "End of contact", true),
-    ]
+    /// The commands used most in a QSO, shown directly. Bare commands, so each row
+    /// stays on one line and the whole menu fits without scrolling.
+    private let primary = ["SNR?", "GRID?", "HW CPY?", "AGN?", "QSL?", "73"]
+
+    /// Everything else, one level down in two short submenus, each short enough
+    /// to fit without scrolling.
+    private let questions = ["INFO?", "STATUS?", "HEARING?", "QUERY MSGS"]
+    private let replies = ["ACK", "NACK", "RR", "QSL", "FB", "YES", "NO", "SK"]
 
     var body: some View {
+        let target = model.selectedCallsign
+        let noTarget = target.isEmpty
+        let report = model.calls.first { $0.call == target }.map { Varicode.formatSNR($0.snr) } ?? ""
         Menu {
-            Section("Send now to \(model.selectedCallsign.isEmpty ? "selected station" : model.selectedCallsign)") {
-                ForEach(commands, id: \.0) { c in
-                    Button {
-                        model.send(c.0)
-                    } label: {
-                        Text("\(c.0)  —  \(c.1)")
-                    }
-                    .disabled(model.selectedCallsign.isEmpty)
+            Section(noTarget ? "Pick a station first" : "Send to \(target)") {
+                Button {
+                    model.send("SNR \(report)")
+                } label: {
+                    Text(report.isEmpty ? "Send SNR (not heard)" : "Send SNR \(report)")
                 }
-            }
-            Section("Insert") {
-                Button("MSG (store in their inbox)") { text = "MSG " }
-                Button("MSG TO: (relay via station)") { text = "MSG TO:" }
-                Button("QUERY MSG <id>") { text = "QUERY MSG " }
-                Button("QUERY CALL <call>") { text = "QUERY CALL " }
-                Button("Relay  CALL>…") { text = ">" }
-                Button("SNR report") {
-                    if let cd = model.calls.first(where: { $0.call == model.selectedCallsign }) {
-                        text = "SNR \(Varicode.formatSNR(cd.snr))"
+                .disabled(noTarget || report.isEmpty)
+                ForEach(primary, id: \.self) { c in
+                    Button(c) { model.send(c) }
+                        .disabled(noTarget)
+                }
+                Menu("More questions") {
+                    ForEach(questions, id: \.self) { c in
+                        Button(c) { model.send(c) }
+                            .disabled(noTarget)
                     }
                 }
-                Button("GRID \(model.settings.station.grid.prefix(4))") { text = "GRID \(model.settings.station.grid)" }
-                Button("Reply: \(model.settings.station.replyMessage)") { text = model.settings.station.replyMessage }
+                Menu("Replies") {
+                    ForEach(replies, id: \.self) { c in
+                        Button(c) { model.send(c) }
+                            .disabled(noTarget)
+                    }
+                }
             }
-            Section("To group") {
-                ForEach(["@ALLCALL", "@HB"] + model.settings.station.groups, id: \.self) { g in
-                    Button(g) { model.selectedCallsign = g }
+            Section {
+                Menu("Insert into message") {
+                    Button("MSG (store in their inbox)") { text = "MSG " }
+                    Button("MSG TO: (relay via station)") { text = "MSG TO:" }
+                    Button("QUERY MSG <id>") { text = "QUERY MSG " }
+                    Button("QUERY CALL <call>") { text = "QUERY CALL " }
+                    Button("Relay  CALL>…") { text = ">" }
+                    Button("GRID \(model.settings.station.grid.prefix(4))") { text = "GRID \(model.settings.station.grid)" }
+                    Button("Reply: \(model.settings.station.replyMessage)") { text = model.settings.station.replyMessage }
+                }
+                Menu("Talk to a group") {
+                    ForEach(["@ALLCALL", "@HB"] + model.settings.station.groups, id: \.self) { g in
+                        Button(g) { model.selectedCallsign = g }
+                    }
                 }
             }
         } label: {
@@ -302,6 +308,7 @@ struct QueryCommandMenu: View {
                 .font(.system(size: 26))
                 .foregroundStyle(Theme.accent)
         }
+        .menuOrder(.fixed)
         .menuStyle(.button)
         .buttonStyle(.plain)
     }

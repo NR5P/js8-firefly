@@ -90,9 +90,22 @@ final class AudioIO: @unchecked Sendable {
     private var renderOutputLevel: Float = 0.5   // render-thread copy
     private(set) var inputRunning = false
     private(set) var outputRunning = false
-    /// Set once input has run; from then on the watchdog keeps retrying while it can't
-    /// (e.g. session inactive in the background). Never set if input never worked (no permission or device).
+    /// Set once audio has been started with microphone permission; from then on the
+    /// watchdog keeps retrying while input isn't running, including when the very first
+    /// start failed (iOS can hand over an empty input format at launch). Never set
+    /// without permission, so a denied microphone isn't retried forever.
     private var wantsAudio = false
+    /// True while input is failing for want of a usable format, so watchdog retries
+    /// don't re-raise the same error every few seconds.
+    private var reportedNoInput = false
+
+    static var hasRecordPermission: Bool {
+        #if os(iOS)
+        return AVAudioApplication.shared.recordPermission == .granted
+        #else
+        return AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        #endif
+    }
 
     /// Input channel: 0 = left, 1 = right, -1 = mix.
     var inputChannel = 0
@@ -222,6 +235,7 @@ final class AudioIO: @unchecked Sendable {
     // MARK: Start / stop
 
     func start() {
+        if Self.hasRecordPermission { wantsAudio = true }
         observeConfigurationChanges()
         applyInputGain()
         startInput()
@@ -279,9 +293,13 @@ final class AudioIO: @unchecked Sendable {
               hwFormat.sampleRate == deviceFormat.sampleRate,
               hwFormat.channelCount == deviceFormat.channelCount else {
             NSLog("JS8 audio input not started: tap %@, device %@", hwFormat, deviceFormat)
-            onError?("No audio input available")
+            if !reportedNoInput {
+                reportedNoInput = true
+                onError?("No audio input available")
+            }
             return
         }
+        reportedNoInput = false
         let monoFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: hwFormat.sampleRate, channels: 1, interleaved: false)!
         let rxFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: Double(RxRingBuffer.rate), channels: 1, interleaved: false)!
         converter = AVAudioConverter(from: monoFormat, to: rxFormat)

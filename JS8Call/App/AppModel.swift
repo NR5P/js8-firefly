@@ -59,6 +59,8 @@ final class AppModel {
     private(set) var decodeCount = 0
     private(set) var lastDecodeInfo = ""
     private(set) var lastError: String?
+    /// The error on screen came from the audio engine, so it clears once input runs again.
+    @ObservationIgnored private var lastErrorIsAudio = false
     private(set) var routeDescription = ""
     private(set) var usbConnected = false
     private(set) var audioRunning = false
@@ -156,7 +158,12 @@ final class AppModel {
             return
         }
         #endif
-        audio.onError = { [weak self] msg in DispatchQueue.main.async { self?.lastError = msg } }
+        audio.onError = { [weak self] msg in
+            DispatchQueue.main.async {
+                self?.lastError = msg
+                self?.lastErrorIsAudio = true
+            }
+        }
         audio.onInputLevel = { [weak self] l, peak in
             DispatchQueue.main.async {
                 self?.inputLevel = l
@@ -174,10 +181,14 @@ final class AppModel {
         AudioIO.requestRecordPermission { [weak self] granted in
             DispatchQueue.main.async {
                 guard let self else { return }
-                if !granted { self.lastError = "Microphone access is needed to receive. Enable it in Settings." }
+                if !granted {
+                    self.lastError = "Microphone access is needed to receive. Enable it in Settings."
+                    self.lastErrorIsAudio = false
+                }
                 self.audio.configureSession()
                 self.audio.start()
                 self.audioRunning = self.audio.inputRunning
+                self.clearAudioErrorIfRecovered()
                 self.routeDescription = self.audio.routeDescription
                 self.usbConnected = self.audio.isUSBInterfaceConnected
                 self.inputGain = self.audio.inputGain
@@ -367,7 +378,10 @@ final class AppModel {
     @discardableResult
     func send(_ text: String) -> Bool {
         let ok = station.send(text.uppercased())
-        if !ok && settings.station.callsign.isEmpty { lastError = "Set your callsign in Settings first." }
+        if !ok && settings.station.callsign.isEmpty {
+            lastError = "Set your callsign in Settings first."
+            lastErrorIsAudio = false
+        }
         refresh(force: true)
         return ok
     }
@@ -537,6 +551,7 @@ final class AppModel {
         lastAudioRestart = Date()
         audio.restart()
         audioRunning = audio.inputRunning
+        clearAudioErrorIfRecovered()
         routeDescription = audio.routeDescription
         usbConnected = audio.isUSBInterfaceConnected
         inputGain = audio.inputGain
@@ -580,6 +595,13 @@ final class AppModel {
     }
 
     func dismissError() { lastError = nil }
+
+    /// Drops an audio error from the banner once input is running again.
+    private func clearAudioErrorIfRecovered() {
+        guard audio.inputRunning, lastErrorIsAudio else { return }
+        lastError = nil
+        lastErrorIsAudio = false
+    }
 
     func clearConversation() {
         station.clearConversation()

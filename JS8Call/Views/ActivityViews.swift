@@ -90,18 +90,46 @@ struct StationsView: View {
     @Environment(AppModel.self) private var model
     var onSelect: (() -> Void)?
     @State private var filter = ""
+    @State private var copied = false
+
+    private var shown: [CallDetail] {
+        model.calls.filter { filter.isEmpty || $0.call.contains(filter.uppercased()) }
+    }
+
+    /// Copies every listed callsign as one comma-separated line (no spaces),
+    /// so other apps can split it on commas.
+    private func copyAll() {
+        Pasteboard.copy(shown.map(\.call).joined(separator: ","))
+        copied = true
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            copied = false
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader(title: "Stations Heard", icon: "person.2.wave.2",
-                          trailing: AnyView(Text("\(model.calls.count)").font(Theme.mono(11)).foregroundStyle(Theme.faint)))
+                          trailing: AnyView(HStack(spacing: 10) {
+                            if !model.calls.isEmpty {
+                                Button(action: copyAll) {
+                                    Label(copied ? "Copied" : "Copy All",
+                                          systemImage: copied ? "checkmark" : "doc.on.doc")
+                                        .font(.caption)
+                                }
+                                .buttonStyle(.plain)
+                                .foregroundStyle(copied ? Theme.accent : Theme.faint)
+                                .accessibilityHint("Copies all heard callsigns, separated by commas")
+                            }
+                            Text("\(model.calls.count)").font(Theme.mono(11)).foregroundStyle(Theme.faint)
+                          }))
             if model.calls.isEmpty {
                 EmptyStateView(icon: "antenna.radiowaves.left.and.right", title: "No stations yet",
                                subtitle: "Heartbeats, CQs and directed traffic will populate this list.")
             } else {
                 ScrollView {
                     LazyVStack(spacing: 6) {
-                        ForEach(model.calls.filter { filter.isEmpty || $0.call.contains(filter.uppercased()) }) { cd in
+                        ForEach(shown) { cd in
                             StationRow(cd: cd, myGrid: model.settings.station.grid,
                                        selected: model.selectedCallsign == cd.call,
                                        watch: model.settings.watch(matching: cd.call))

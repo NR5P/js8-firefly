@@ -203,6 +203,7 @@ struct StationMapView: View {
                 ctx.stroke(map.borders.applying(t), with: .color(.white.opacity(0.17)), lineWidth: 0.8)
             }
             drawGrid(&ctx, cam, size, vis)
+            drawPaths(&ctx, cam, size, markers)
             drawMe(&ctx, cam, size)
             drawMarkers(&ctx, cam, size, markers)
         }
@@ -247,6 +248,58 @@ struct StationMapView: View {
                 lat += stepLat
             }
             lon += stepLon
+        }
+    }
+
+    /// Great-circle paths from our square to each station (the way the signal goes),
+    /// in the station's recency color; the picked or selected one drawn brighter, on top.
+    private func drawPaths(_ ctx: inout GraphicsContext, _ cam: MapCamera, _ size: CGSize, _ markers: [MapMarker]) {
+        guard let sq = GridMath.square(myGrid) else { return }
+        let me = (lat: sq.lat + sq.height / 2, lon: sq.lon + sq.width / 2)
+        let now = AppClock.now()
+        let selected = model.selectedCallsign
+        // The copy of our own spot nearest the centre; each path continues from there unwrapped.
+        let startLon = me.lon + 360 * ((cam.lon - me.lon) / 360).rounded()
+        var highlighted: [(Path, Color)] = []
+        for m in markers {
+            let pts = Self.greatCircle(from: me, to: (m.lat, m.lon), steps: 48)
+            var path = Path()
+            var prevLon = startLon
+            for (k, p) in pts.enumerated() {
+                var lon = p.lon + 360 * ((prevLon - p.lon) / 360).rounded()
+                if k == 0 { lon = startLon }
+                prevLon = lon
+                let pt = CGPoint(x: (lon - cam.lon) * cam.xScale + size.width / 2,
+                                 y: (cam.lat - p.lat) * cam.scale + size.height / 2)
+                if k == 0 { path.move(to: pt) } else { path.addLine(to: pt) }
+            }
+            let color = Self.ageColor(now.timeIntervalSince(m.latest))
+            if m.id == picked || m.calls.contains(where: { $0.call == selected }) {
+                highlighted.append((path, color))
+            } else {
+                ctx.stroke(path, with: .color(color.opacity(0.45)), lineWidth: 1.1)
+            }
+        }
+        for (path, color) in highlighted {
+            ctx.stroke(path, with: .color(color.opacity(0.9)), lineWidth: 1.8)
+        }
+    }
+
+    /// The short great-circle path between two places, as (lat, lon) points in degrees.
+    static func greatCircle(from a: (lat: Double, lon: Double), to b: (lat: Double, lon: Double),
+                            steps: Int) -> [(lat: Double, lon: Double)] {
+        func unit(_ lat: Double, _ lon: Double) -> (Double, Double, Double) {
+            let p = lat * .pi / 180, l = lon * .pi / 180
+            return (cos(p) * cos(l), cos(p) * sin(l), sin(p))
+        }
+        let u = unit(a.lat, a.lon), v = unit(b.lat, b.lon)
+        let w = acos(min(1, max(-1, u.0 * v.0 + u.1 * v.1 + u.2 * v.2)))
+        guard w > 1e-6 else { return [a, b] }
+        return (0...steps).map { k in
+            let t = Double(k) / Double(steps)
+            let s1 = sin((1 - t) * w) / sin(w), s2 = sin(t * w) / sin(w)
+            let x = s1 * u.0 + s2 * v.0, y = s1 * u.1 + s2 * v.1, z = s1 * u.2 + s2 * v.2
+            return (asin(min(1, max(-1, z))) * 180 / .pi, atan2(y, x) * 180 / .pi)
         }
     }
 

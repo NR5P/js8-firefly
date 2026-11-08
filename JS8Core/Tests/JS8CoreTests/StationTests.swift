@@ -135,6 +135,24 @@ final class StationTests: XCTestCase {
         XCTAssertTrue(rows.contains { $0.text.contains("J1Y HEARTBEAT SNR") }, "\(rows)")
     }
 
+    func testHeartbeatKeepsFinerGrid() {
+        let a = makeStation("KN4CRD", "EM73")
+        var cd = CallDetail()
+        cd.call = "J1Y"
+        cd.grid = "PM95SQ"
+        a.logCallActivity(cd)
+        cd.grid = "PM95"
+        a.logCallActivity(cd)
+        XCTAssertEqual(a.callActivity["J1Y"]?.grid, "PM95SQ")
+        cd.grid = ""
+        a.logCallActivity(cd)
+        XCTAssertEqual(a.callActivity["J1Y"]?.grid, "PM95SQ")
+        // Moving to another square replaces it.
+        cd.grid = "PM96"
+        a.logCallActivity(cd)
+        XCTAssertEqual(a.callActivity["J1Y"]?.grid, "PM96")
+    }
+
     func testCQAndCompoundCallsign() {
         let a = makeStation("VE3/KN4CRD", "EM73")
         let b = makeStation("J1Y", "PM95")

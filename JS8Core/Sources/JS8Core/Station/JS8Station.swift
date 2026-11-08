@@ -324,7 +324,12 @@ public final class JS8Station {
         var d = dIn
         if d.call.qTrimmed().isEmpty || d.call.contains(">") { return }
         if let old = callActivity[d.call] {
-            if d.grid.isEmpty && !old.grid.isEmpty { d.grid = old.grid }
+            // Keep what we know: an empty grid, or a heartbeat's 4 characters
+            // after a GRID reply gave 6, shouldn't lose the finer locator.
+            let newGrid = d.grid.qTrimmed().uppercased(), oldGrid = old.grid.qTrimmed().uppercased()
+            if !oldGrid.isEmpty && (newGrid.isEmpty || (oldGrid.count > newGrid.count && oldGrid.hasPrefix(newGrid))) {
+                d.grid = old.grid
+            }
             if d.ackTimestamp == nil { d.ackTimestamp = old.ackTimestamp }
             if d.cqTimestamp == nil { d.cqTimestamp = old.cqTimestamp }
             callActivity[d.call] = d

@@ -91,6 +91,7 @@ struct StationsView: View {
     var onSelect: (() -> Void)?
     @State private var filter = ""
     @State private var copied = false
+    @AppStorage("stationsShowMap") private var showMap = false
 
     private var shown: [CallDetail] {
         model.calls.filter { filter.isEmpty || $0.call.contains(filter.uppercased()) }
@@ -111,6 +112,13 @@ struct StationsView: View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader(title: "Stations Heard", icon: "person.2.wave.2",
                           trailing: AnyView(HStack(spacing: 10) {
+                            Button { showMap.toggle() } label: {
+                                Label(showMap ? "List" : "Map", systemImage: showMap ? "list.bullet" : "map")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(Theme.faint)
+                            .accessibilityHint(showMap ? "Shows heard stations as a list" : "Shows heard stations on a map by grid")
                             if !model.calls.isEmpty {
                                 Button(action: copyAll) {
                                     Label(copied ? "Copied" : "Copy All",
@@ -123,32 +131,44 @@ struct StationsView: View {
                             }
                             Text("\(model.calls.count)").font(Theme.mono(11)).foregroundStyle(Theme.faint)
                           }))
-            if model.calls.isEmpty {
+            if showMap {
+                StationMapView(onSelect: onSelect)
+            } else if model.calls.isEmpty {
                 EmptyStateView(icon: "antenna.radiowaves.left.and.right", title: "No stations yet",
                                subtitle: "Heartbeats, CQs and directed traffic will populate this list.")
             } else {
                 ScrollView {
                     LazyVStack(spacing: 6) {
-                        ForEach(shown) { cd in
-                            StationRow(cd: cd, myGrid: model.settings.station.grid,
-                                       selected: model.selectedCallsign == cd.call,
-                                       watch: model.settings.watch(matching: cd.call))
-                                .onTapGesture {
-                                    model.selectedCallsign = model.selectedCallsign == cd.call ? "" : cd.call
-                                    if model.selectedCallsign == cd.call { onSelect?() }
-                                }
-                                .contextMenu {
-                                    Button("Select \(cd.call)") { model.selectedCallsign = cd.call }
-                                    Button("Move to \(cd.offset) Hz") { model.setOffset(cd.offset) }
-                                    Button("Ask SNR?") { model.selectedCallsign = cd.call; model.send("SNR?") }
-                                    Button("Ask GRID?") { model.selectedCallsign = cd.call; model.send("GRID?") }
-                                }
-                        }
+                        ForEach(shown) { cd in StationListRow(cd: cd, onSelect: onSelect) }
                     }
                 }
                 .scrollDismissesKeyboard(.interactively)
             }
         }
+    }
+}
+
+/// A heard station in a list: tap to select it, long-press for actions.
+struct StationListRow: View {
+    @Environment(AppModel.self) private var model
+    let cd: CallDetail
+    var onSelect: (() -> Void)?
+
+    var body: some View {
+        StationRow(cd: cd, myGrid: model.settings.station.grid,
+                   selected: model.selectedCallsign == cd.call,
+                   watch: model.settings.watch(matching: cd.call))
+            .contentShape(Rectangle())
+            .onTapGesture {
+                model.selectedCallsign = model.selectedCallsign == cd.call ? "" : cd.call
+                if model.selectedCallsign == cd.call { onSelect?() }
+            }
+            .contextMenu {
+                Button("Select \(cd.call)") { model.selectedCallsign = cd.call }
+                Button("Move to \(cd.offset) Hz") { model.setOffset(cd.offset) }
+                Button("Ask SNR?") { model.selectedCallsign = cd.call; model.send("SNR?") }
+                Button("Ask GRID?") { model.selectedCallsign = cd.call; model.send("GRID?") }
+            }
     }
 }
 

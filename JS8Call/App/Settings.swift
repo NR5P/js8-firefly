@@ -179,6 +179,29 @@ enum GridMath {
         return String(decoding: bytes, as: UTF8.self)
     }
 
+    /// The square a locator covers, in degrees east and north: 2°×1° for 4
+    /// characters, or the 5'×2.5' subsquare when a valid 6 are given.
+    static func square(_ g: String) -> (lon: Double, lat: Double, width: Double, height: Double)? {
+        let t = g.trimmingCharacters(in: .whitespaces)
+        guard isValid(t) else { return nil }
+        let u = Array(t.uppercased().utf8).map { Double($0) }
+        var lon = (u[0] - 65) * 20 - 180 + (u[2] - 48) * 2
+        var lat = (u[1] - 65) * 10 - 90 + (u[3] - 48)
+        if u.count >= 6, (65...88).contains(u[4]), (65...88).contains(u[5]) {
+            lon += (u[4] - 65) * 2 / 24
+            lat += (u[5] - 65) / 24
+            return (lon, lat, 2.0 / 24, 1.0 / 24)
+        }
+        return (lon, lat, 2, 1)
+    }
+
+    /// The 4 or 6 character locator a grid string is placed by, e.g. "EM73" or "EM73TU".
+    static func mapKey(_ g: String) -> String? {
+        guard let sq = square(g) else { return nil }
+        let t = g.trimmingCharacters(in: .whitespaces).uppercased()
+        return String(t.prefix(sq.width < 2 ? 6 : 4))
+    }
+
     static func distanceBearing(from a: String, to b: String) -> (km: Double, bearing: Double)? {
         guard isValid(a), isValid(b) else { return nil }
         let (lon1, lat1) = Varicode.grid2deg(a)

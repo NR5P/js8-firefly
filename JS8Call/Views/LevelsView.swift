@@ -89,6 +89,25 @@ struct LevelsSheet: View {
     }
 }
 
+#if os(macOS)
+/// TX level control shown above the controls while tuning, so it can be set without opening Levels.
+struct TuneLevelBar: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        @Bindable var model = model
+        VStack(alignment: .leading, spacing: 4) {
+            LevelSlider(title: "TX level", value: $model.settings.tx.outputLevel, range: 0.01...1)
+            Text("Raise until the radio's ALC just starts to move, then back off a little.")
+                .font(.caption)
+                .foregroundStyle(Theme.dim)
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.warn.opacity(0.12)))
+    }
+}
+#endif
+
 /// Slider with fine −/+ steps and a percentage readout.
 private struct LevelSlider: View {
     let title: String

@@ -433,6 +433,9 @@ struct ComposeBar: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
+            #if os(macOS)
+            if model.isTuning { TuneLevelBar() }
+            #endif
             ControlStrip()
         }
         .padding(10)

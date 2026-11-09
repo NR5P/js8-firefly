@@ -241,6 +241,9 @@ final class AppModel {
 
         if settings.hasOnboarded { requestNotificationPermission() }
 
+        #if os(macOS)
+        rig.rtsKeysPTT = settings.tx.pttMethod == .serialRTS
+        #endif
         rig.configure(settings.rig)
         if settings.autoGrid && !isDemo { locator.startTracking() }
         startTimers()
@@ -297,6 +300,9 @@ final class AppModel {
         }
         waterfall.rangeDB = settings.waterfallRangeDB
         waterfall.brightness = settings.waterfallBrightness
+        #if os(macOS)
+        rig.rtsKeysPTT = settings.tx.pttMethod == .serialRTS
+        #endif
         if settings.rig != old.rig { rig.configure(settings.rig) }
         if settings.autoGrid != old.autoGrid, started {
             if settings.autoGrid { locator.startTracking() } else { locator.stopTracking() }

@@ -303,7 +303,11 @@ private struct MacDevicePickers: View {
 private struct RigSection: View {
     @Environment(AppModel.self) private var model
     @Binding var settings: AppSettings
-    @State private var serialPorts: [String] = []
+    #if os(macOS)
+    @State private var serialPorts: [SerialTransport.PortInfo] = []
+    @State private var findingRadio = false
+    @State private var findResult: String?
+    #endif
     @State private var bleDevices: [(UUID, String)] = []
     @State private var scanner: BLESerialTransport?
 
@@ -355,9 +359,24 @@ private struct RigSection: View {
                 #if os(macOS)
                 Picker("Serial port", selection: $settings.rig.serialPath) {
                     Text("Choose…").tag("")
-                    ForEach(serialPorts, id: \.self) { Text($0).tag($0) }
+                    ForEach(serialPorts, id: \.path) { Text($0.label).tag($0.path) }
+                    if !settings.rig.serialPath.isEmpty, !serialPorts.contains(where: { $0.path == settings.rig.serialPath }) {
+                        Text("\(settings.rig.serialPath) (not connected)").tag(settings.rig.serialPath)
+                    }
                 }
-                .onAppear { serialPorts = SerialTransport.availablePorts() }
+                .onAppear { serialPorts = SerialTransport.availablePortInfo() }
+                HStack {
+                    Button(findingRadio ? "Searching…" : "Find radio") { findRadio() }
+                        .disabled(findingRadio)
+                    Button("Refresh ports") { serialPorts = SerialTransport.availablePortInfo() }
+                        .disabled(findingRadio)
+                    Spacer()
+                    if findingRadio { ProgressView().controlSize(.small) }
+                }
+                .buttonStyle(.borderless)
+                if let findResult {
+                    Text(findResult).font(.caption).foregroundStyle(Theme.dim)
+                }
                 Picker("Baud rate", selection: $settings.rig.baud) {
                     ForEach([4800, 9600, 19200, 38400, 57600, 115200], id: \.self) { Text("\($0)").tag($0) }
                 }
@@ -365,7 +384,7 @@ private struct RigSection: View {
                     Text("1").tag(1)
                     Text("2").tag(2)
                 }
-                Text("Match the radio's CAT RATE menu. FTDX3000: use its USB port (CP210x driver). QMX/QDX: the QMX serial port.")
+                Text("Match the radio's CAT RATE menu. Find radio asks each USB port for the frequency (nothing is keyed) and picks the one that answers; quit rigctld, flrig or other apps using the radio first. FTDX3000: the CP2105 port 1 (CAT). QMX/QDX: the QMX serial port.")
                     .font(.caption).foregroundStyle(Theme.dim)
                 #endif
             case .bluetooth:
@@ -427,6 +446,32 @@ private struct RigSection: View {
         case .disconnected: return Theme.faint
         }
     }
+
+    #if os(macOS)
+    /// Probe the USB serial ports for the radio and select the one that answers.
+    private func findRadio() {
+        findingRadio = true
+        findResult = nil
+        model.rig.disconnect()   // free our own port so it can be probed too
+        let rig = settings.rig
+        Task.detached {
+            let found = SerialTransport.findRadio(protocol: rig.catProtocol, baud: rig.baud,
+                                                  stopBits: rig.stopBits, icomAddress: rig.icomAddress)
+            await MainActor.run {
+                findingRadio = false
+                serialPorts = SerialTransport.availablePortInfo()
+                if let found {
+                    let label = serialPorts.first(where: { $0.path == found })?.label ?? found
+                    findResult = "Found the radio on \(label)."
+                    if settings.rig.serialPath == found { model.rig.connect() } else { settings.rig.serialPath = found }
+                } else {
+                    findResult = "No radio answered at \(rig.baud) baud. Check the cable, power, the radio's CAT RATE, and that no other app has the port open."
+                    if !settings.rig.serialPath.isEmpty { model.rig.connect() }
+                }
+            }
+        }
+    }
+    #endif
 
     private func toggleScan() {
         if let s = scanner {

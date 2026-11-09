@@ -215,17 +215,30 @@ final class SerialTransport: ByteTransport {
     private let path: String
     private let baud: Int
     private let stopBits: Int
+    /// Keep RTS high while idle. Yaesu rigs with CAT RTS on (FTDX3000 etc.) ignore CAT while RTS is low.
+    private let holdRTS: Bool
     private var fd: Int32 = -1
     private var source: DispatchSourceRead?
 
-    init(path: String, baud: Int, stopBits: Int) {
+    init(path: String, baud: Int, stopBits: Int, holdRTS: Bool = false) {
+        self.holdRTS = holdRTS
         self.path = path
         self.baud = baud
         self.stopBits = stopBits
     }
 
-    static func availablePorts() -> [String] {
-        var ports: [String] = []
+    static func availablePorts() -> [String] { availablePortInfo().map(\.path) }
+
+    /// A serial port with a readable description of the device behind it.
+    struct PortInfo: Hashable {
+        let path: String
+        let label: String
+        let isUSB: Bool
+    }
+
+    /// Serial ports with their USB product name and port number, USB devices first.
+    static func availablePortInfo() -> [PortInfo] {
+        var ports: [PortInfo] = []
         let matching = IOServiceMatching(kIOSerialBSDServiceValue) as NSMutableDictionary
         matching[kIOSerialBSDTypeKey] = kIOSerialBSDAllTypes
         var iter: io_iterator_t = 0
@@ -233,14 +246,97 @@ final class SerialTransport: ByteTransport {
         defer { IOObjectRelease(iter) }
         var service = IOIteratorNext(iter)
         while service != 0 {
-            if let p = IORegistryEntryCreateCFProperty(service, kIOCalloutDeviceKey as CFString, kCFAllocatorDefault, 0)?
-                .takeRetainedValue() as? String {
-                ports.append(p)
+            defer {
+                IOObjectRelease(service)
+                service = IOIteratorNext(iter)
             }
-            IOObjectRelease(service)
-            service = IOIteratorNext(iter)
+            guard let path = IORegistryEntryCreateCFProperty(service, kIOCalloutDeviceKey as CFString, kCFAllocatorDefault, 0)?
+                .takeRetainedValue() as? String,
+                  !path.contains("Bluetooth-Incoming"), !path.contains("debug-console") else { continue }
+            func parent(_ key: String) -> Any? {
+                IORegistryEntrySearchCFProperty(service, kIOServicePlane, key as CFString, kCFAllocatorDefault,
+                                                IOOptionBits(kIORegistryIterateRecursively | kIORegistryIterateParents))
+            }
+            let product = (parent("USB Product Name") as? String) ?? (parent("kUSBProductString") as? String)
+            let iface = (parent("bInterfaceNumber") as? NSNumber)?.intValue
+            let name = (path as NSString).lastPathComponent.replacingOccurrences(of: "cu.", with: "")
+            var label = name
+            if let product {
+                var desc = product
+                    .replacingOccurrences(of: " USB to UART Bridge Controller", with: "")
+                    .replacingOccurrences(of: " Dual", with: "")
+                    .replacingOccurrences(of: " (Enhanced Port)", with: "")
+                    .replacingOccurrences(of: " (Standard Port)", with: "")
+                if let iface { desc += " · port \(iface + 1)" }
+                // Yaesu radios with a built-in CP2105: the Enhanced port (first) carries CAT.
+                let dualCP210x = product.contains("CP2105") || product.contains("Enhanced Port") || product.contains("Standard Port")
+                if dualCP210x, let iface { desc += iface == 0 ? " (CAT)" : " (PTT/RTTY)" }
+                label = "\(desc) — \(name)"
+            }
+            ports.append(PortInfo(path: path, label: label, isUSB: product != nil))
         }
-        return ports.filter { !$0.contains("Bluetooth-Incoming") && !$0.contains("debug-console") }.sorted()
+        return ports.sorted { ($0.isUSB ? 0 : 1, $0.label) < ($1.isUSB ? 0 : 1, $1.label) }
+    }
+
+    /// Ask each USB serial port for the radio's frequency (read-only) and return the first that answers.
+    /// Blocking; call off the main thread. `skip` is left alone (e.g. a port this app has open).
+    static func findRadio(protocol proto: CATProtocol, baud: Int, stopBits: Int, icomAddress: UInt8,
+                          skip: String? = nil) -> String? {
+        let query: [UInt8]
+        switch proto {
+        case .yaesu, .kenwood: query = Array("FA;".utf8)
+        case .icom: query = [0xFE, 0xFE, icomAddress, 0xE0, 0x03, 0xFD]
+        }
+        for port in availablePortInfo() where port.isUSB && port.path != skip {
+            guard let reply = probe(port.path, query: query, baud: baud, stopBits: stopBits) else { continue }
+            switch proto {
+            case .yaesu, .kenwood:
+                if String(decoding: reply, as: UTF8.self).contains("FA") { return port.path }
+            case .icom:
+                // A reply from the rig (not just our echo on a shared CI-V bus): FE FE E0 <rig> 03 ...
+                let b = [UInt8](reply)
+                if b.indices.contains(where: { i in i + 4 < b.count && b[i] == 0xFE && b[i + 1] == 0xFE && b[i + 2] == 0xE0 && b[i + 4] == 0x03 }) {
+                    return port.path
+                }
+            }
+        }
+        return nil
+    }
+
+    private static func probe(_ path: String, query: [UInt8], baud: Int, stopBits: Int) -> Data? {
+        let fd = Darwin.open(path, O_RDWR | O_NOCTTY | O_NONBLOCK)
+        guard fd >= 0 else { return nil }
+        var saved = termios()
+        tcgetattr(fd, &saved)
+        defer {
+            tcsetattr(fd, TCSANOW, &saved)
+            Darwin.close(fd)
+        }
+        var t = saved
+        cfmakeraw(&t)
+        t.c_cflag |= tcflag_t(CLOCAL | CREAD)
+        t.c_cflag &= ~tcflag_t(CRTSCTS)
+        if stopBits == 2 { t.c_cflag |= tcflag_t(CSTOPB) } else { t.c_cflag &= ~tcflag_t(CSTOPB) }
+        cfsetspeed(&t, speed_t(baud))
+        tcsetattr(fd, TCSANOW, &t)
+        // RTS high (radios that gate CAT on RTS), DTR low (never key an interface that uses DTR for PTT).
+        var rts = TIOCM_RTS, dtr = TIOCM_DTR
+        _ = ioctl(fd, UInt(TIOCMBIS), &rts)
+        _ = ioctl(fd, UInt(TIOCMBIC), &dtr)
+        tcflush(fd, TCIOFLUSH)
+        usleep(100_000)
+        _ = query.withUnsafeBytes { Darwin.write(fd, $0.baseAddress, query.count) }
+        var out = Data()
+        var buf = [UInt8](repeating: 0, count: 256)
+        let deadline = Date().addingTimeInterval(0.6)
+        while Date() < deadline {
+            let n = read(fd, &buf, buf.count)
+            if n > 0 { out.append(contentsOf: buf[0..<n]) }
+            usleep(30_000)
+        }
+        // Leave RTS low as we found most interfaces, so nothing stays keyed.
+        _ = ioctl(fd, UInt(TIOCMBIC), &rts)
+        return out.isEmpty ? nil : out
     }
 
     func open() {
@@ -257,8 +353,9 @@ final class SerialTransport: ByteTransport {
         if stopBits == 2 { t.c_cflag |= tcflag_t(CSTOPB) } else { t.c_cflag &= ~tcflag_t(CSTOPB) }
         cfsetspeed(&t, speed_t(baud))
         tcsetattr(fd, TCSANOW, &t)
-        // Start with RTS and DTR low so interfaces that key on them stay in receive.
-        setRTS(false)
+        // DTR low so interfaces that key on it stay in receive. RTS low too, unless it isn't
+        // used for PTT, in which case hold it high so radios that gate CAT on RTS will answer.
+        setRTS(holdRTS)
         setDTR(false)
 
         let src = DispatchSource.makeReadSource(fileDescriptor: fd, queue: .main)

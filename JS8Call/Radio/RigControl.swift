@@ -184,6 +184,16 @@ final class RigController {
     var supportsPTT: Bool { settings.connection != .none }
     var connection: RigConnection { settings.connection }
 
+    #if os(macOS)
+    /// True when PTT is keyed on the serial RTS line; otherwise RTS is held high for CAT.
+    var rtsKeysPTT = false {
+        didSet {
+            guard rtsKeysPTT != oldValue, settings.connection == .serial else { return }
+            transport?.setRTS(!rtsKeysPTT)
+        }
+    }
+    #endif
+
     func configure(_ s: RigSettings) {
         if s == settings, status == .connected { return }
         disconnect()
@@ -206,7 +216,8 @@ final class RigController {
                 status = .error("Choose a serial port")
                 return
             }
-            t = SerialTransport(path: settings.serialPath, baud: settings.baud, stopBits: settings.stopBits)
+            t = SerialTransport(path: settings.serialPath, baud: settings.baud, stopBits: settings.stopBits,
+                                holdRTS: !rtsKeysPTT)
             #else
             status = .error("USB serial is not available on iOS")
             return

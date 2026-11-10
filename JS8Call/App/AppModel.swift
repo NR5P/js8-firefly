@@ -2,7 +2,7 @@ import AVFoundation
 import CoreGraphics
 import Foundation
 import JS8Core
-import Observation
+import Combine
 import UserNotifications
 #if os(iOS)
 import UIKit
@@ -18,12 +18,23 @@ struct DecodeMarker: Identifiable, Hashable {
     let submode: JS8Submode
 }
 
+/// Waterfall, spectrum, decode labels and input level: updated up to 20 times a second.
+@MainActor
+final class LiveFeed: ObservableObject {
+    @Published var waterfallImage: CGImage?
+    @Published var spectrum: [Float] = []
+    @Published var periodMarks: [WaterfallRenderer.PeriodMark] = []
+    @Published var markers: [DecodeMarker] = []
+    @Published var inputLevel: Float = -120
+    /// When the input last came within 0.5 dB of full scale.
+    @Published var lastClip = Date.distantPast
+}
+
 /// Central coordinator: audio, decoding, transmit timing, PTT, rig control
 /// and the JS8 station engine.
 @MainActor
-@Observable
-final class AppModel {
-    var settings: AppSettings {
+final class AppModel: ObservableObject {
+    @Published var settings: AppSettings {
         didSet { settingsChanged(from: oldValue) }
     }
 
@@ -31,40 +42,36 @@ final class AppModel {
     let audio = AudioIO()
     let rig = RigController()
     let locator = GridLocator()
-    @ObservationIgnored private let waterfall = WaterfallRenderer()
+    private let waterfall = WaterfallRenderer()
+    /// Values that change many times a second, kept apart so only the waterfall and meters redraw for them.
+    let live = LiveFeed()
+    private var forwarders: [AnyCancellable] = []
 
     // UI snapshots
-    private(set) var bandRows: [BandActivityRow] = []
-    private(set) var calls: [CallDetail] = []
-    private(set) var conversation: [ConversationLine] = []
-    private(set) var bandConversation: [ConversationLine] = []
-    private(set) var inbox: [InboxMessage] = []
-    private(set) var pendingReplies: [PendingReply] = []
-    private(set) var waterfallImage: CGImage?
-    private(set) var spectrum: [Float] = []
-    private(set) var periodMarks: [WaterfallRenderer.PeriodMark] = []
-    private(set) var markers: [DecodeMarker] = []
-    private(set) var inputLevel: Float = -120
-    /// When the input last came within 0.5 dB of full scale.
-    private(set) var lastClip = Date.distantPast
+    @Published private(set) var bandRows: [BandActivityRow] = []
+    @Published private(set) var calls: [CallDetail] = []
+    @Published private(set) var conversation: [ConversationLine] = []
+    @Published private(set) var bandConversation: [ConversationLine] = []
+    @Published private(set) var inbox: [InboxMessage] = []
+    @Published private(set) var pendingReplies: [PendingReply] = []
     /// Hardware RX gain, or nil when the audio interface doesn't expose one.
-    private(set) var inputGain: Float?
-    private(set) var isTransmitting = false
-    private(set) var isTuning = false
-    private(set) var txText = ""
-    private(set) var queuedFrames = 0
-    private(set) var heartbeatLoop = false
-    private(set) var cqLoop = false
-    private(set) var averageDT: Float = 0
-    private(set) var decodeCount = 0
-    private(set) var lastDecodeInfo = ""
-    private(set) var lastError: String?
+    @Published private(set) var inputGain: Float?
+    @Published private(set) var isTransmitting = false
+    @Published private(set) var isTuning = false
+    @Published private(set) var txText = ""
+    @Published private(set) var queuedFrames = 0
+    @Published private(set) var heartbeatLoop = false
+    @Published private(set) var cqLoop = false
+    @Published private(set) var averageDT: Float = 0
+    @Published private(set) var decodeCount = 0
+    @Published private(set) var lastDecodeInfo = ""
+    @Published private(set) var lastError: String?
     /// The error on screen came from the audio engine, so it clears once input runs again.
-    @ObservationIgnored private var lastErrorIsAudio = false
-    private(set) var routeDescription = ""
-    private(set) var usbConnected = false
-    private(set) var audioRunning = false
-    var banner: String?
+    private var lastErrorIsAudio = false
+    @Published private(set) var routeDescription = ""
+    @Published private(set) var usbConnected = false
+    @Published private(set) var audioRunning = false
+    @Published var banner: String?
 
     var selectedCallsign: String {
         get { station.selectedCallsign }
@@ -75,25 +82,25 @@ final class AppModel {
     }
 
     /// Outgoing message box. Non-empty text pauses auto-replies, as in JS8Call.
-    var draft: String = "" {
+    @Published var draft: String = "" {
         didSet { if station.draftText != draft { station.draftText = draft } }
     }
 
-    @ObservationIgnored private var decoders: [JS8Submode: JS8ModeDecoder] = [:]
-    @ObservationIgnored private let decodeQueue = DispatchQueue(label: "js8.decode", qos: .userInitiated)
-    @ObservationIgnored private var lastDecodedPeriod: [JS8Submode: Double] = [:]
-    @ObservationIgnored private var decodesInFlight = 0
-    @ObservationIgnored private var recentDT: [Float] = []
-    @ObservationIgnored private var timers: [Timer] = []
-    @ObservationIgnored private var catPTTOn = false
-    @ObservationIgnored private var lastRefresh = Date.distantPast
-    @ObservationIgnored private var started = false
+    private var decoders: [JS8Submode: JS8ModeDecoder] = [:]
+    private let decodeQueue = DispatchQueue(label: "js8.decode", qos: .userInitiated)
+    private var lastDecodedPeriod: [JS8Submode: Double] = [:]
+    private var decodesInFlight = 0
+    private var recentDT: [Float] = []
+    private var timers: [Timer] = []
+    private var catPTTOn = false
+    private var lastRefresh = Date.distantPast
+    private var started = false
     /// Band chat lines already checked against the watch list, and when each term last notified.
-    @ObservationIgnored private var watchSeenLines: Set<UUID> = []
-    @ObservationIgnored private var watchLastAlert: [String: Date] = [:]
-    @ObservationIgnored private var lastAudioRestart = Date.distantPast
+    private var watchSeenLines: Set<UUID> = []
+    private var watchLastAlert: [String: Date] = [:]
+    private var lastAudioRestart = Date.distantPast
     #if DEBUG
-    @ObservationIgnored private var demo: DemoAir?
+    private var demo: DemoAir?
     #endif
 
     /// True when scripted demo stations stand in for the radio (screenshots).
@@ -136,6 +143,9 @@ final class AppModel {
         }
         waterfall.rangeDB = s.waterfallRangeDB
         waterfall.brightness = s.waterfallBrightness
+        // Views read rig and locator state through the model, so pass their changes on.
+        forwarders = [rig.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() },
+                      locator.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }]
         locator.onGrid = { [weak self] grid in
             guard let self, self.settings.station.grid != grid else { return }
             self.settings.station.grid = grid
@@ -150,7 +160,7 @@ final class AppModel {
         #if DEBUG
         if DemoAir.isEnabled {
             audio.spectrum.onRow = { [weak self] row in self?.waterfall.add(row: row) }
-            demo = DemoAir(ring: audio.ring, spectrum: audio.spectrum) { [weak self] level in self?.inputLevel = level }
+            demo = DemoAir(ring: audio.ring, spectrum: audio.spectrum) { [weak self] level in self?.live.inputLevel = level }
             demo?.start()
             requestNotificationPermission()
             audioRunning = true
@@ -166,8 +176,8 @@ final class AppModel {
         }
         audio.onInputLevel = { [weak self] l, peak in
             DispatchQueue.main.async {
-                self?.inputLevel = l
-                if peak >= 0.944 { self?.lastClip = Date() }
+                self?.live.inputLevel = l
+                if peak >= 0.944 { self?.live.lastClip = Date() }
             }
         }
         audio.outputLevel = settings.tx.outputLevel
@@ -343,7 +353,7 @@ final class AppModel {
         let bw = settings.submode.bandwidth
         let slop = 25.0
         let signals = bandRows.map { ($0.offset, $0.submode.bandwidth) }
-            + markers.map { (Int($0.frequency.rounded()), $0.bandwidth) }
+            + live.markers.map { (Int($0.frequency.rounded()), $0.bandwidth) }
         let hit = signals
             .filter { hz >= Double($0.0) - slop && hz <= Double($0.0 + $0.1) + slop }
             .min { abs(Double($0.0 + $0.1 / 2) - hz) < abs(Double($1.0 + $1.1 / 2) - hz) }
@@ -531,14 +541,14 @@ final class AppModel {
             station.handleDecode(r, dial: dial)
             let text = DecodedText(r)
             let label = text.isCompound ? text.compoundCall : (text.directed.first ?? String(text.message.prefix(10)))
-            markers.append(DecodeMarker(frequency: r.frequency, bandwidth: r.submode.bandwidth, label: label,
+            live.markers.append(DecodeMarker(frequency: r.frequency, bandwidth: r.submode.bandwidth, label: label,
                                         date: Date(), submode: r.submode))
             recentDT.append(r.dt)
         }
         decodeCount += results.count
         if recentDT.count > 40 { recentDT.removeFirst(recentDT.count - 40) }
         averageDT = recentDT.isEmpty ? 0 : recentDT.sorted()[recentDT.count / 2]
-        markers.removeAll { Date().timeIntervalSince($0.date) > 45 }
+        live.markers.removeAll { Date().timeIntervalSince($0.date) > 45 }
         station.processActivity()
         refresh(force: true)
     }
@@ -571,14 +581,14 @@ final class AppModel {
             restartAudio()
         }
         station.tick()
-        markers.removeAll { Date().timeIntervalSince($0.date) > 45 }
+        live.markers.removeAll { Date().timeIntervalSince($0.date) > 45 }
         refresh()
     }
 
     private func waterfallLoop() {
-        waterfallImage = waterfall.makeImage()
-        spectrum = waterfall.latestSpectrum
-        periodMarks = waterfall.periodMarks
+        live.waterfallImage = waterfall.makeImage()
+        live.spectrum = waterfall.latestSpectrum
+        live.periodMarks = waterfall.periodMarks
     }
 
     func refresh(force: Bool = false) {

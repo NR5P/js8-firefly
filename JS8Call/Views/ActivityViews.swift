@@ -3,7 +3,7 @@ import JS8Core
 
 /// JS8Call's "Band Activity" table.
 struct BandActivityView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     var compact = false
 
     var body: some View {
@@ -87,7 +87,7 @@ struct BandRow: View {
 
 /// JS8Call's "Call Activity" (heard stations) list.
 struct StationsView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     var onSelect: (() -> Void)?
     @State private var filter = ""
     @State private var copied = false
@@ -150,7 +150,7 @@ struct StationsView: View {
 
 /// A heard station in a list: tap to select it, long-press for actions.
 struct StationListRow: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     let cd: CallDetail
     var onSelect: (() -> Void)?
 
@@ -236,7 +236,7 @@ struct EmptyStateView: View {
             Image(systemName: icon)
                 .font(.system(size: 30, weight: .light))
                 .foregroundStyle(Theme.accent.opacity(0.7))
-                .symbolEffect(.pulse)
+                .pulseEffect()
             Text(title).font(Theme.rounded(15, .semibold)).foregroundStyle(Theme.text)
             Text(subtitle).font(Theme.rounded(12)).foregroundStyle(Theme.dim).multilineTextAlignment(.center)
         }

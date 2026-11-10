@@ -5,19 +5,14 @@ import AVFoundation
 
 /// Quick RX / TX level adjustment, opened from the Levels button or the header meter.
 struct LevelsSheet: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        @Bindable var model = model
         NavigationStack {
             Form {
                 Section {
-                    TimelineView(.periodic(from: .now, by: 0.25)) { ctx in
-                        RxMeter(level: model.inputLevel,
-                                clipping: ctx.date.timeIntervalSince(model.lastClip) < 2,
-                                transmitting: model.isTransmitting)
-                    }
+                    LiveRxMeter(transmitting: model.isTransmitting)
                     Picker("Input channel", selection: $model.settings.inputChannel) {
                         Text("Left").tag(0)
                         Text("Right").tag(1)
@@ -89,13 +84,26 @@ struct LevelsSheet: View {
     }
 }
 
+/// RX meter fed by the live level, so only the meter redraws as the level moves.
+private struct LiveRxMeter: View {
+    @EnvironmentObject private var live: LiveFeed
+    let transmitting: Bool
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 0.25)) { ctx in
+            RxMeter(level: live.inputLevel,
+                    clipping: ctx.date.timeIntervalSince(live.lastClip) < 2,
+                    transmitting: transmitting)
+        }
+    }
+}
+
 #if os(macOS)
 /// TX level control shown above the controls while tuning, so it can be set without opening Levels.
 struct TuneLevelBar: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        @Bindable var model = model
         VStack(alignment: .leading, spacing: 4) {
             LevelSlider(title: "TX level", value: $model.settings.tx.outputLevel, range: 0.01...1)
             Text("Raise until the radio's ALC just starts to move, then back off a little.")

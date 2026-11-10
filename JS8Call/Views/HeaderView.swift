@@ -3,7 +3,7 @@ import JS8Core
 
 /// Top status console: clock, period ring, band/dial, speed and TX state.
 struct HeaderView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @State private var showBands = false
     @State private var showLevels = false
 
@@ -65,7 +65,7 @@ struct HeaderView: View {
                 }
             )
             .overlay(alignment: .bottom) {
-                LevelBar(level: model.inputLevel, transmitting: model.isTransmitting)
+                LiveLevelBar(transmitting: model.isTransmitting)
                     .frame(height: 3)
                     .frame(height: 10, alignment: .bottom)
                     .contentShape(Rectangle())
@@ -103,7 +103,7 @@ struct HeaderView: View {
 }
 
 struct SpeedMenu: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
 
     var body: some View {
         Menu {
@@ -181,7 +181,7 @@ struct LevelBar: View {
 }
 
 struct BandPickerSheet: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var custom = ""
     @State private var customLabel = ""
@@ -318,5 +318,15 @@ struct BandPickerSheet: View {
     static func parseKHz(_ text: String) -> UInt64? {
         guard let khz = Double(text.replacingOccurrences(of: ",", with: ".")), khz > 100 else { return nil }
         return UInt64((khz * 1000).rounded())
+    }
+}
+
+/// Header input meter fed by the live level.
+private struct LiveLevelBar: View {
+    @EnvironmentObject private var live: LiveFeed
+    let transmitting: Bool
+
+    var body: some View {
+        LevelBar(level: live.inputLevel, transmitting: transmitting)
     }
 }

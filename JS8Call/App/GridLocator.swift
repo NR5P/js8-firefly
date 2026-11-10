@@ -1,20 +1,19 @@
 import CoreLocation
 import Foundation
-import Observation
+import Combine
 
 /// Turns the device location into a Maidenhead grid, either once on request
 /// or continuously while automatic updates are on.
 @MainActor
-@Observable
-final class GridLocator: NSObject, CLLocationManagerDelegate {
-    private(set) var isLocating = false
-    private(set) var isTracking = false
-    private(set) var lastError: String?
+final class GridLocator: NSObject, ObservableObject, CLLocationManagerDelegate {
+    @Published private(set) var isLocating = false
+    @Published private(set) var isTracking = false
+    @Published private(set) var lastError: String?
 
     /// Called with each new 6-character grid.
-    @ObservationIgnored var onGrid: ((String) -> Void)?
+    var onGrid: ((String) -> Void)?
 
-    @ObservationIgnored private let manager = CLLocationManager()
+    private let manager = CLLocationManager()
 
     #if os(macOS)
     private static let deniedMessage = "Location access is off. Turn it on for JS8 Firefly in System Settings › Privacy & Security › Location Services."

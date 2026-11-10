@@ -2,12 +2,13 @@ import SwiftUI
 
 @main
 struct JS8CallApp: App {
-    @State private var model = AppModel()
+    @StateObject private var model = AppModel()
 
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environment(model)
+                .environmentObject(model)
+                .environmentObject(model.live)
         }
         #if os(macOS)
         .defaultSize(width: 1280, height: 860)

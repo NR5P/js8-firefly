@@ -129,7 +129,7 @@ struct MapMarker: Identifiable {
 /// Stations Heard on an offline map, placed by the grids they sent on air
 /// (heartbeats, CQs and GRID replies), so it shows where they say they are.
 struct StationMapView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     var onSelect: (() -> Void)?
 
     /// Where the user has panned or zoomed to; nil keeps every station in frame.
@@ -175,7 +175,7 @@ struct StationMapView: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.stroke, lineWidth: 1))
-            .onChange(of: markers.map(\.id)) { _, _ in
+            .onValueChange(of: markers.map(\.id)) { _ in
                 if let p = picked, !markers.contains(where: { $0.id == p }) { picked = nil }
             }
 
@@ -243,7 +243,7 @@ struct StationMapView: View {
                 let p = cam.point(lon: lon, lat: lat + stepLat, in: size)
                 ctx.draw(Text(String(name.prefix(squares ? 4 : 2)))
                             .font(Theme.mono(9, .semibold))
-                            .foregroundStyle(Theme.accent.opacity(0.28)),
+                            .foregroundColor(Theme.accent.opacity(0.28)),
                          at: CGPoint(x: p.x + 3, y: p.y + 2), anchor: .topLeading)
                 lat += stepLat
             }
@@ -351,7 +351,7 @@ struct StationMapView: View {
                 ctx.stroke(ring, with: .color(m.id == picked ? Theme.text : Theme.accent), lineWidth: 1.6)
             }
             if many {
-                ctx.draw(Text("\(m.calls.count)").font(Theme.mono(9, .bold)).foregroundStyle(Theme.bg), at: p)
+                ctx.draw(Text("\(m.calls.count)").font(Theme.mono(9, .bold)).foregroundColor(Theme.bg), at: p)
             }
             taken.append(CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r))
             labels.append((m, p))
@@ -366,7 +366,7 @@ struct StationMapView: View {
         var placed: [CGRect] = []
         for (m, p) in order {
             let name = m.calls.count > 1 ? "\(m.calls[0].call) +\(m.calls.count - 1)" : m.calls[0].call
-            let text = ctx.resolve(Text(name).font(Theme.mono(10, .semibold)).foregroundStyle(Theme.text))
+            let text = ctx.resolve(Text(name).font(Theme.mono(10, .semibold)).foregroundColor(Theme.text))
             let s = text.measure(in: CGSize(width: 200, height: 40))
             let r: CGFloat = m.calls.count > 1 ? 8 : 5.5
             // Right of the dot, else left, below or above: wherever it fits on the map without overlapping.
@@ -403,14 +403,37 @@ struct StationMapView: View {
                 lastDrag = v.translation
             }
             .onEnded { _ in lastDrag = nil }
-        let zoom = MagnifyGesture()
+        #if os(macOS)
+        let zoom: AnyGesture<Void>
+        if #available(macOS 14, *) {
+            zoom = AnyGesture(pinch(markers, in: size).map { _ in () })
+        } else {
+            // macOS 13: no pinch location, so zoom about the middle of the map.
+            zoom = AnyGesture(MagnificationGesture()
+                .onChanged { v in
+                    let last = lastZoom ?? 1
+                    let mid = CGPoint(x: size.width / 2, y: size.height / 2)
+                    move(markers, in: size) { $0.zoom(by: v / last, at: mid, in: size) }
+                    lastZoom = v
+                }
+                .onEnded { _ in lastZoom = nil }
+                .map { _ in () })
+        }
+        #else
+        let zoom = pinch(markers, in: size)
+        #endif
+        return drag.simultaneously(with: zoom)
+    }
+
+    @available(macOS 14, *)
+    private func pinch(_ markers: [MapMarker], in size: CGSize) -> some Gesture {
+        MagnifyGesture()
             .onChanged { v in
                 let last = lastZoom ?? 1
                 move(markers, in: size) { $0.zoom(by: v.magnification / last, at: v.startLocation, in: size) }
                 lastZoom = v.magnification
             }
             .onEnded { _ in lastZoom = nil }
-        return drag.simultaneously(with: zoom)
     }
 
     /// The camera the user left, kept inside the current view size, or one framing every station.

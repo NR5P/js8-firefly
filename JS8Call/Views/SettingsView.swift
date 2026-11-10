@@ -5,10 +5,9 @@ import CoreBluetooth
 #endif
 
 struct SettingsView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        @Bindable var model = model
         Form {
             StationSection(settings: $model.settings)
             WatchSection(settings: $model.settings)
@@ -26,7 +25,7 @@ struct SettingsView: View {
 }
 
 private struct StationSection: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @Binding var settings: AppSettings
     @State private var groupText = ""
 
@@ -209,7 +208,7 @@ private struct ColorSwatches: View {
 }
 
 private struct AudioSection: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @Binding var settings: AppSettings
 
     var body: some View {
@@ -301,7 +300,7 @@ private struct MacDevicePickers: View {
 #endif
 
 private struct RigSection: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @Binding var settings: AppSettings
     #if os(macOS)
     @State private var serialPorts: [SerialTransport.PortInfo] = []
@@ -528,10 +527,9 @@ private struct JS8Section: View {
 }
 
 private struct ClockSection: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        @Bindable var model = model
         Section {
             TimelineView(.periodic(from: .now, by: 0.5)) { _ in
                 LabeledContent("UTC (corrected)", value: Format.utcTime.string(from: AppClock.now()))

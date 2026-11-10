@@ -8,7 +8,7 @@ import AppKit
 
 /// The RX/TX conversation pane, styled as a chat.
 struct ConversationView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     var filterCallsign: String?
 
     var body: some View {
@@ -32,7 +32,7 @@ struct ConversationView: View {
                 .padding(.vertical, 8)
             }
             .scrollDismissesKeyboard(.interactively)
-            .onChange(of: model.conversation.last?.text) { _, _ in
+            .onValueChange(of: model.conversation.last?.text) { _ in
                 if let last = lines.last {
                     withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
@@ -47,7 +47,7 @@ struct ConversationView: View {
 /// Everything decoded across the passband, one bubble per transmission.
 /// Tap a bubble to move there and select the sender.
 struct BandConversationView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     var filterCallsign: String?
     var showHeartbeats = false
 
@@ -86,7 +86,7 @@ struct BandConversationView: View {
                 .padding(.vertical, 8)
             }
             .scrollDismissesKeyboard(.interactively)
-            .onChange(of: model.bandConversation.last?.text) { _, _ in
+            .onValueChange(of: model.bandConversation.last?.text) { _ in
                 if let last = lines.last {
                     withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
@@ -145,7 +145,7 @@ enum ChatScope: String, CaseIterable, Identifiable {
 
 /// Conversation header with the All band / My offset switch, used on every layout.
 struct ChatPane: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @AppStorage("chatScope") private var scope = ChatScope.band
     @AppStorage("chatShowHeartbeats") private var showHeartbeats = false
     @State private var onlySelected = false
@@ -246,7 +246,7 @@ struct MessageBubble: View {
 /// whenever a decode arrives, and a rebuild throws a scrolled menu back to its
 /// start, so anything below the fold was effectively unreachable on a busy band.
 struct QueryCommandMenu: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @Binding var text: String
 
     /// The commands used most in a QSO, shown directly. Bare commands, so each row
@@ -316,11 +316,10 @@ struct QueryCommandMenu: View {
 
 /// Message composer with selected-callsign pill, live frame preview and controls.
 struct ComposeBar: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @FocusState private var focused: Bool
 
     var body: some View {
-        @Bindable var model = model
         let text = model.draft
         VStack(spacing: 8) {
             if !model.pendingReplies.isEmpty {
@@ -340,7 +339,7 @@ struct ComposeBar: View {
                 HStack(spacing: 8) {
                     Image(systemName: "dot.radiowaves.right")
                         .foregroundStyle(Theme.tx)
-                        .symbolEffect(.variableColor.iterative, isActive: model.isTransmitting)
+                        .transmitEffect(isActive: model.isTransmitting)
                     Text(model.isTuning ? "TUNING" : (model.txText.isEmpty ? "Waiting for next period…" : model.txText))
                         .font(Theme.mono(12, .semibold))
                         .foregroundStyle(Theme.tx)
@@ -390,7 +389,7 @@ struct ComposeBar: View {
                         .autocorrectionDisabled()
                         #endif
                         .onSubmit(send)
-                        .onChange(of: model.draft) { _, new in
+                        .onValueChange(of: model.draft) { new in
                             let up = new.uppercased()
                             if up != new { model.draft = up }
                         }
@@ -453,7 +452,7 @@ struct ComposeBar: View {
 
 /// CQ / Heartbeat / Tune / TX-enable buttons.
 struct ControlStrip: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @State private var showLevels = false
 
     var body: some View {
@@ -513,7 +512,7 @@ struct ControlButton: View {
 
 /// Store-and-forward inbox.
 struct InboxView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {

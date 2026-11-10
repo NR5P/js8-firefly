@@ -4,7 +4,8 @@ import JS8Core
 /// Waterfall with frequency ruler, spectrum trace, decode labels and the
 /// operator's transmit passband. Tap or drag to move the offset.
 struct WaterfallView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var live: LiveFeed
     var showSpectrum = true
 
     private let minHz = WaterfallRenderer.minHz
@@ -17,7 +18,7 @@ struct WaterfallView: View {
             let rulerH: CGFloat = 18
             ZStack(alignment: .topLeading) {
                 Color.black
-                if let img = model.waterfallImage {
+                if let img = live.waterfallImage {
                     Image(decorative: img, scale: 1)
                         .resizable()
                         .interpolation(.medium)
@@ -37,7 +38,7 @@ struct WaterfallView: View {
                         p.addLine(to: CGPoint(x: x, y: rulerH))
                         ctx.stroke(p, with: .color(Theme.dim), lineWidth: 1)
                         if major {
-                            ctx.draw(Text("\(Int(f))").font(Theme.mono(9)).foregroundStyle(Theme.dim),
+                            ctx.draw(Text("\(Int(f))").font(Theme.mono(9)).foregroundColor(Theme.dim),
                                      at: CGPoint(x: x, y: 6), anchor: .center)
                         }
                         f += 100
@@ -45,11 +46,11 @@ struct WaterfallView: View {
 
                     // Period boundaries (the lines themselves are in the image)
                     let imgH = size.height - rulerH
-                    for mark in model.periodMarks {
+                    for mark in live.periodMarks {
                         let y = rulerH + CGFloat(mark.rowsFromTop) / CGFloat(WaterfallRenderer.height) * imgH
                         guard y < size.height - 8 else { continue }
                         let label = ctx.resolve(Text(Self.utc.string(from: mark.start))
-                            .font(Theme.mono(9)).foregroundStyle(Color.white.opacity(0.85)))
+                            .font(Theme.mono(9)).foregroundColor(Color.white.opacity(0.85)))
                         let ts = label.measure(in: CGSize(width: 100, height: 20))
                         let rect = CGRect(x: 2, y: y - ts.height - 1, width: ts.width + 6, height: ts.height)
                         ctx.fill(Path(roundedRect: rect, cornerRadius: 3), with: .color(Color.black.opacity(0.5)))
@@ -57,12 +58,12 @@ struct WaterfallView: View {
                     }
 
                     // Spectrum trace
-                    if showSpectrum, model.spectrum.count > 2 {
+                    if showSpectrum, live.spectrum.count > 2 {
                         var path = Path()
-                        let n = model.spectrum.count
+                        let n = live.spectrum.count
                         let baseY = size.height
                         let ampH = (size.height - rulerH) * 0.35
-                        for (i, v) in model.spectrum.enumerated() {
+                        for (i, v) in live.spectrum.enumerated() {
                             let x = CGFloat(i) / CGFloat(n - 1) * size.width
                             let y = baseY - CGFloat(max(0, min(1.2, v))) * ampH
                             if i == 0 { path.move(to: CGPoint(x: x, y: y)) } else { path.addLine(to: CGPoint(x: x, y: y)) }
@@ -92,7 +93,7 @@ struct WaterfallView: View {
                     // Decode labels
                     let now = Date()
                     var lanes: [CGFloat] = []
-                    for m in model.markers.sorted(by: { $0.frequency < $1.frequency }) {
+                    for m in live.markers.sorted(by: { $0.frequency < $1.frequency }) {
                         let age = now.timeIntervalSince(m.date)
                         let alpha = max(0.15, 1 - age / 45)
                         let mx = xFor(Double(m.frequency), w)
@@ -100,7 +101,7 @@ struct WaterfallView: View {
                         var lane = 0
                         while lane < lanes.count && lanes[lane] > mx { lane += 1 }
                         if lane == lanes.count { lanes.append(0) }
-                        let label = Text(m.label).font(Theme.mono(10, .semibold)).foregroundStyle(Color.white)
+                        let label = Text(m.label).font(Theme.mono(10, .semibold)).foregroundColor(.white)
                         let resolved = ctx.resolve(label)
                         let ts = resolved.measure(in: CGSize(width: 200, height: 20))
                         lanes[lane] = mx + ts.width + 10

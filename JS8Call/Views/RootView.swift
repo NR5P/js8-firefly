@@ -2,7 +2,7 @@ import SwiftUI
 import JS8Core
 
 struct RootView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
@@ -27,7 +27,7 @@ struct RootView: View {
 
 /// iPhone: tabbed layout.
 struct PhoneLayout: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @State private var tab = 0
 
     var body: some View {
@@ -115,7 +115,7 @@ struct ChatTab: View {
 /// Mac / iPad: JS8Call-style console with waterfall, band activity,
 /// conversation and heard stations side by side.
 struct DesktopLayout: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var showSettings = false
     @State private var showInbox = false
@@ -229,7 +229,7 @@ struct DesktopLayout: View {
 }
 
 struct BannerView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
 
     var body: some View {
         VStack(spacing: 6) {
@@ -262,7 +262,7 @@ struct BannerView: View {
 }
 
 struct OnboardingView: View {
-    @Environment(AppModel.self) private var model
+    @EnvironmentObject private var model: AppModel
     @State private var call = ""
     @State private var grid = ""
 
@@ -282,7 +282,7 @@ struct OnboardingView: View {
             VStack(spacing: 12) {
                 TextField("Your callsign", text: $call)
                     .uppercaseInput()
-                    .onChange(of: call) { _, v in if v != v.uppercased() { call = v.uppercased() } }
+                    .onValueChange(of: call) { v in if v != v.uppercased() { call = v.uppercased() } }
                     .font(Theme.mono(20, .bold))
                     .multilineTextAlignment(.center)
                     .padding(12)

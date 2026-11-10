@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "JS8Core",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS(.v17), .macOS(.v13)],
     products: [
         .library(name: "JS8Core", targets: ["JS8Core"]),
     ],

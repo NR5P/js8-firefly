@@ -1,5 +1,5 @@
 import Foundation
-import Observation
+import Combine
 
 /// How the app talks to the radio for frequency and PTT.
 enum RigConnection: String, Codable, CaseIterable, Identifiable {
@@ -152,8 +152,7 @@ struct RigSettings: Codable, Equatable {
 
 /// Frequency and PTT control for the connected radio.
 @MainActor
-@Observable
-final class RigController {
+final class RigController: ObservableObject {
     enum Status: Equatable {
         case disconnected, connecting, connected, error(String)
         var label: String {
@@ -166,9 +165,9 @@ final class RigController {
         }
     }
 
-    private(set) var status: Status = .disconnected
-    private(set) var frequency: UInt64?
-    private(set) var pttActive = false
+    @Published private(set) var status: Status = .disconnected
+    @Published private(set) var frequency: UInt64?
+    @Published private(set) var pttActive = false
     var onFrequency: ((UInt64) -> Void)?
 
     private var settings = RigSettings()

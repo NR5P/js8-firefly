@@ -513,13 +513,21 @@ struct ControlButton: View {
 /// Store-and-forward inbox.
 struct InboxView: View {
     @EnvironmentObject private var model: AppModel
+    @State private var storeFor: StoreTarget?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SectionHeader(title: "Inbox", icon: "tray.full")
+            SectionHeader(title: "Inbox", icon: "tray.full", trailing: AnyView(
+                Button { let sel = model.selectedCallsign; storeFor = StoreTarget(call: AppModel.storeRecipientProblem(sel) == nil ? sel : "") } label: {
+                    Label("Store Message", systemImage: "square.and.pencil")
+                        .font(Theme.rounded(13, .semibold))
+                }
+                .buttonStyle(.borderless)
+                .foregroundStyle(Theme.accent)
+            ))
             if model.inbox.isEmpty {
                 EmptyStateView(icon: "tray", title: "No messages",
-                               subtitle: "Messages sent to you with MSG, and messages you hold for others (MSG TO:), appear here.")
+                               subtitle: "Messages sent to you with MSG, and messages you hold for others, appear here. Tap Store Message to leave one at your station for someone to pick up.")
             } else {
                 ScrollView {
                     LazyVStack(spacing: 8) {
@@ -531,6 +539,7 @@ struct InboxView: View {
                                         model.selectedCallsign = m.from
                                         model.draft = "MSG "
                                     }
+                                    Button("Store Message for \(m.from)…") { storeFor = StoreTarget(call: m.from) }
                                     Button("Delete", role: .destructive) { model.deleteMessage(m) }
                                 }
                         }
@@ -538,6 +547,100 @@ struct InboxView: View {
                 }
             }
         }
+        .sheet(item: $storeFor) { t in StoreMessageSheet(to: t.call) }
+    }
+}
+
+/// Identifiable wrapper so a sheet can open pre-filled for a callsign.
+struct StoreTarget: Identifiable {
+    let id = UUID()
+    var call: String
+}
+
+/// JS8Call's "Store Message" dialog: write a message that waits at this
+/// station, nothing is transmitted now. The recipient is told it's waiting when
+/// they heartbeat or send QUERY MSGS, and fetches it with QUERY MSG <id>.
+struct StoreMessageSheet: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    @State var to: String
+    @State private var text = ""
+    @FocusState private var focus: Field?
+    private enum Field { case to, text }
+
+    private var cleanTo: String { to.trimmingCharacters(in: .whitespaces).uppercased() }
+    /// Shown once they leave the To field, not while they're mid-callsign.
+    private var problem: String? { cleanTo.isEmpty || focus == .to ? nil : AppModel.storeRecipientProblem(cleanTo) }
+    private var canSave: Bool {
+        AppModel.storeRecipientProblem(cleanTo) == nil && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Callsign or @GROUP", text: $to)
+                        .font(Theme.mono(15, .bold))
+                        .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.characters)
+                        #endif
+                        .focused($focus, equals: .to)
+                        .onSubmit { focus = .text }
+                        .onValueChange(of: to) { new in
+                            let up = new.uppercased()
+                            if up != new { to = up }
+                        }
+                    if let problem {
+                        Text(problem).font(.footnote).foregroundStyle(Theme.tx)
+                    }
+                } header: {
+                    Text("To")
+                }
+                Section {
+                    TextField("Message", text: $text, axis: .vertical)
+                        .font(Theme.mono(15))
+                        .lineLimit(3...8)
+                        .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.characters)
+                        #endif
+                        .focused($focus, equals: .text)
+                        .onValueChange(of: text) { new in
+                            let up = new.uppercased()
+                            if up != new { text = up }
+                        }
+                } header: {
+                    Text("Message")
+                } footer: {
+                    Text(footer)
+                }
+            }
+            .navigationTitle("Store Message")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Store") {
+                        model.storeMessage(for: cleanTo, text: text)
+                        dismiss()
+                    }
+                    .disabled(!canSave)
+                }
+            }
+            .onAppear { focus = cleanTo.isEmpty ? .to : .text }
+        }
+        #if os(macOS)
+        .frame(minWidth: 460, minHeight: 360)
+        #endif
+    }
+
+    private var footer: String {
+        let who = AppModel.storeRecipientProblem(cleanTo) == nil ? cleanTo : "that station"
+        let me = model.settings.station.callsign.isEmpty ? "you" : model.settings.station.callsign
+        return "Nothing is sent now. The message waits in your Inbox as HOLDING. When \(who) sends a heartbeat or QUERY MSGS to \(me), Firefly replies that a message is waiting, and they pick it up with QUERY MSG. Keep Firefly running with auto-reply on so your station can answer."
     }
 }
 

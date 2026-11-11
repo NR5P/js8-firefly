@@ -153,6 +153,7 @@ struct StationListRow: View {
     @EnvironmentObject private var model: AppModel
     let cd: CallDetail
     var onSelect: (() -> Void)?
+    @State private var storeFor: StoreTarget?
 
     var body: some View {
         StationRow(cd: cd, myGrid: model.settings.station.grid,
@@ -168,7 +169,9 @@ struct StationListRow: View {
                 Button("Move to \(cd.offset) Hz") { model.setOffset(cd.offset) }
                 Button("Ask SNR?") { model.selectedCallsign = cd.call; model.send("SNR?") }
                 Button("Ask GRID?") { model.selectedCallsign = cd.call; model.send("GRID?") }
+                Button("Store Message for \(cd.call)…") { storeFor = StoreTarget(call: cd.call) }
             }
+            .sheet(item: $storeFor) { t in StoreMessageSheet(to: t.call) }
     }
 }
 

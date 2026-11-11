@@ -458,6 +458,41 @@ final class AppModel: ObservableObject {
         station.inbox.delete(m.id)
     }
 
+    /// Why `to` can't hold a stored message, or nil when it can. Takes a
+    /// callsign (base or compound) or an @GROUP.
+    static func storeRecipientProblem(_ to: String) -> String? {
+        let to = to.trimmingCharacters(in: .whitespaces).uppercased()
+        if to.isEmpty { return "Enter a callsign or @GROUP." }
+        if to.hasPrefix("@") {
+            if to == "@ALLCALL" || to == "@HB" || !Varicode.isGroupAllowed(to) { return "\(to) can't hold messages." }
+            return to.count > 1 ? nil : "Enter a group name after @."
+        }
+        return Varicode.isValidCallsign(to).valid ? nil : "\(to) isn't a valid callsign."
+    }
+
+    /// JS8Call's "Store Message…": keep a message at this station for `to`,
+    /// without transmitting. It is held as STORE, exactly like one relayed here
+    /// with MSG TO:, so `to` sees it waiting in our HB ACK / QUERY MSGS replies
+    /// and fetches it with QUERY MSG <id>.
+    @discardableResult
+    func storeMessage(for to: String, text: String) -> Int? {
+        let to = to.trimmingCharacters(in: .whitespaces).uppercased()
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard Self.storeRecipientProblem(to) == nil, !text.isEmpty else { return nil }
+        let mycall = settings.station.callsign.uppercased()
+        var d = CommandDetail()
+        d.cmd = " MSG "
+        d.from = mycall
+        d.to = to
+        d.relayPath = mycall
+        d.text = text
+        d.utc = AppClock.now()
+        d.dial = settings.dialFrequency
+        d.offset = settings.offset
+        d.submode = settings.submode
+        return station.inbox.append(type: "STORE", d)
+    }
+
     func preview(_ text: String) -> [DecodedText] { station.preview(text.uppercased()) }
 
     private func keyPTT(_ on: Bool) {

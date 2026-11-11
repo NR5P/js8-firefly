@@ -518,7 +518,7 @@ struct InboxView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader(title: "Inbox", icon: "tray.full", trailing: AnyView(
-                Button { let sel = model.selectedCallsign; storeFor = StoreTarget(call: AppModel.storeRecipientProblem(sel) == nil ? sel : "") } label: {
+                Button { let sel = model.selectedCallsign; storeFor = StoreTarget(call: model.storeRecipientProblem(sel) == nil ? sel : "") } label: {
                     Label("Store Message", systemImage: "square.and.pencil")
                         .font(Theme.rounded(13, .semibold))
                 }
@@ -535,11 +535,14 @@ struct InboxView: View {
                             InboxRow(message: m)
                                 .onTapGesture { model.markRead(m) }
                                 .contextMenu {
-                                    Button("Reply to \(m.from)") {
-                                        model.selectedCallsign = m.from
+                                    let other = counterpart(m)
+                                    Button("Reply to \(other)") {
+                                        model.selectedCallsign = other
                                         model.draft = "MSG "
                                     }
-                                    Button("Store Message for \(m.from)…") { storeFor = StoreTarget(call: m.from) }
+                                    if model.storeRecipientProblem(other) == nil {
+                                        Button("Store Message for \(other)…") { storeFor = StoreTarget(call: other) }
+                                    }
                                     Button("Delete", role: .destructive) { model.deleteMessage(m) }
                                 }
                         }
@@ -548,6 +551,13 @@ struct InboxView: View {
             }
         }
         .sheet(item: $storeFor) { t in StoreMessageSheet(to: t.call) }
+    }
+
+    /// The other station on a message: the sender, or the recipient when it's
+    /// one we stored ourselves.
+    private func counterpart(_ m: InboxMessage) -> String {
+        let me = model.settings.station.callsign.uppercased()
+        return Varicode.baseCallsign(m.from) == Varicode.baseCallsign(me) && !m.to.isEmpty ? m.to : m.from
     }
 }
 
@@ -570,9 +580,9 @@ struct StoreMessageSheet: View {
 
     private var cleanTo: String { to.trimmingCharacters(in: .whitespaces).uppercased() }
     /// Shown once they leave the To field, not while they're mid-callsign.
-    private var problem: String? { cleanTo.isEmpty || focus == .to ? nil : AppModel.storeRecipientProblem(cleanTo) }
+    private var problem: String? { cleanTo.isEmpty || focus == .to ? nil : model.storeRecipientProblem(cleanTo) }
     private var canSave: Bool {
-        AppModel.storeRecipientProblem(cleanTo) == nil && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        model.storeRecipientProblem(cleanTo) == nil && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -638,7 +648,7 @@ struct StoreMessageSheet: View {
     }
 
     private var footer: String {
-        let who = AppModel.storeRecipientProblem(cleanTo) == nil ? cleanTo : "that station"
+        let who = model.storeRecipientProblem(cleanTo) == nil ? cleanTo : "that station"
         let me = model.settings.station.callsign.isEmpty ? "you" : model.settings.station.callsign
         return "Nothing is sent now. The message waits in your Inbox as HOLDING. When \(who) sends a heartbeat or QUERY MSGS to \(me), Firefly replies that a message is waiting, and they pick it up with QUERY MSG. Keep Firefly running with auto-reply on so your station can answer."
     }

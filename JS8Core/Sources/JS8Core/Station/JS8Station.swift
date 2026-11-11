@@ -1059,6 +1059,44 @@ public final class JS8Station {
 
     /// Compose and start sending a message (JS8Call's Send button).
     @discardableResult
+    /// Why `to` can't hold a message stored at this station, or nil when it
+    /// can. Takes a callsign (base or compound) or an @GROUP.
+    public static func storeRecipientProblem(_ to: String, mycall: String = "") -> String? {
+        let to = to.qTrimmed().uppercased()
+        if to.isEmpty { return "Enter a callsign or @GROUP." }
+        if to.hasPrefix("@") {
+            if to.count < 2 { return "Enter a group name after @." }
+            if to == "@ALLCALL" || to == "@HB" || !Varicode.isGroupAllowed(to) { return "\(to) can't hold messages." }
+            return to.contains(" ") ? "\(to) isn't a valid group." : nil
+        }
+        if !Varicode.isValidCallsign(to).valid { return "\(to) isn't a valid callsign." }
+        let me = mycall.qTrimmed().uppercased()
+        if !me.isEmpty && Varicode.baseCallsign(to) == Varicode.baseCallsign(me) { return "That's your own callsign." }
+        return nil
+    }
+
+    /// JS8Call's "Store Message…": keep a message at this station for `to`
+    /// without transmitting. It is held as STORE under the base callsign, the
+    /// same as a message relayed here with MSG TO:, so `to` hears it's waiting
+    /// in our HB ACK / QUERY MSGS replies and fetches it with QUERY MSG <id>.
+    @discardableResult
+    public func storeMessage(to: String, text: String) -> Int? {
+        let to = to.qTrimmed().uppercased()
+        let text = text.components(separatedBy: .newlines).joined(separator: " ").qTrimmed().uppercased()
+        guard Self.storeRecipientProblem(to, mycall: mycall) == nil, !text.isEmpty, !mycall.isEmpty else { return nil }
+        var d = CommandDetail()
+        d.cmd = " MSG "
+        d.from = mycall
+        d.to = to.hasPrefix("@") ? to : Varicode.baseCallsign(to)
+        d.relayPath = mycall
+        d.text = text
+        d.utc = clock()
+        d.dial = dialFrequency
+        d.offset = offset
+        d.submode = submode
+        return inbox.append(type: "STORE", d)
+    }
+
     public func send(_ text: String) -> Bool {
         let t = text.qTrimmed()
         if t.isEmpty || mycall.isEmpty { return false }

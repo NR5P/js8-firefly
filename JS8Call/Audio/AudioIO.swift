@@ -284,10 +284,11 @@ final class AudioIO: @unchecked Sendable {
         var hwFormat = input.outputFormat(forBus: 0)
         let deviceFormat = input.inputFormat(forBus: 0)
         #if os(macOS)
-        // After setDeviceID the node's output keeps the previous device's channel count
-        // (1 ch from the built-in mic vs 2 ch from a radio's USB codec); the tap accepts
-        // the device's own format, which also keeps both channels selectable.
-        if deviceFormat.sampleRate == hwFormat.sampleRate { hwFormat = deviceFormat }
+        // After setDeviceID the node's output keeps the previous device's format until the
+        // engine starts (1 ch / 48 kHz from the built-in mic vs 2 ch / 44.1 kHz from a radio's
+        // USB codec); the tap accepts the device's own format, which also keeps both channels
+        // selectable. The converter below resamples whatever rate the device runs at.
+        if deviceFormat.sampleRate > 0, deviceFormat.channelCount > 0 { hwFormat = deviceFormat }
         #endif
         guard hwFormat.sampleRate > 0, hwFormat.channelCount > 0,
               hwFormat.sampleRate == deviceFormat.sampleRate,
